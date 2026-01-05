@@ -1,4 +1,4 @@
-name: Backend CI (NestJS)
+name: Backend CI/CD (NestJS)
 
 on:
   push:
@@ -34,3 +34,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # 🔥 CI PASS → MỚI DEPLOY
+      - name: Deploy to Render
+        if: success() && github.event_name == 'push'
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
