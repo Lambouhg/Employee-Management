@@ -6,6 +6,7 @@ This project is organized as a **monorepo** with separate folders for frontend a
 ---
 
 ## 🏗️ Project Structure
+
 Employee-Management/
 ├─ backend/ # NestJS backend
 │ ├─ src/
@@ -57,7 +58,7 @@ Employee-Management/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/<USERNAME>/Employee-Management.git
+git clone https://github.com/<Lambouhg>/Employee-Management.git
 cd Employee-Management
 
 2. Setup Backend:
