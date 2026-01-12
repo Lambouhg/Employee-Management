@@ -20,7 +20,7 @@ describe('App', () => {
   it('should have title signal with initial value', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
-    expect(app['title']()).toBe('frontend');
+    expect(app['title']()).toBe('Employee Management - CI/CD Test');
   });
 
   it('should update title signal value', () => {
