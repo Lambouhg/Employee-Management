@@ -34,10 +34,10 @@ jobs:
         run: npm run lint --if-present
 
       - name: Test
-        run: npm run test --if-present
+        run: npm run test:ci
 
       - name: Build
-        run: npm run build --if-present
+        run: npm run build
 
       - name: Trigger Vercel Deploy
         if: success()
