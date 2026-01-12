@@ -34,7 +34,12 @@ jobs:
         run: npm run lint --if-present
 
       - name: Test
-        run: npm run test --if-present -- --watch=false --browsers=ChromeHeadless
+        run: npm run test --if-present
 
       - name: Build
-        run: npm run build
+        run: npm run build --if-present
+
+      - name: Trigger Vercel Deploy
+        if: success()
+        run: |
+          curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_9VJvrdcQZwxkk4AxTK3U9XcMzReO/csGO0TcuUU
