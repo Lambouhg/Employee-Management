@@ -1,0 +1,361 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// 1. ENUMS - Các kiểu dữ liệu enum
+// ============================================
+
+// Loại hình làm việc
+enum EmploymentType {
+  FULL_TIME // Full-time: 6 ngày/tuần
+  PART_TIME // Part-time: 5 ca/tuần
+}
+
+// Trạng thái lịch làm việc
+enum ScheduleStatus {
+  PENDING // Chờ duyệt - nhân viên vừa submit
+  APPROVED // Đã duyệt - quản lý đã xác nhận
+  LOCKED // Đã khóa - không thể chỉnh sửa, sẵn sàng chấm công
+}
+
+// Trạng thái yêu cầu nghỉ
+enum LeaveStatus {
+  PENDING // Chờ duyệt
+  APPROVED // Đã chấp nhận
+  REJECTED // Đã từ chối
+}
+
+// Loại nghỉ
+enum LeaveType {
+  SICK // Nghỉ ốm
+  EMERGENCY // Bất khả kháng
+  PERSONAL // Cá nhân
+  OTHER // Khác
+}
+
+// Trạng thái chấm công
+enum AttendanceStatus {
+  PRESENT // Có mặt
+  ABSENT // Vắng mặt
+  LATE // Đi muộn
+  EARLY_LEAVE // Về sớm
+  ON_LEAVE // Nghỉ phép
+}
+
+// Thứ trong tuần
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// Loại ca làm việc
+enum ShiftType {
+  MORNING // Ca sáng
+  AFTERNOON // Ca chiều
+  EVENING // Ca tối
+  NIGHT // Ca đêm
+}
+
+// ============================================
+// 2. ROLE & PERMISSION - Vai trò và quyền hạn
+// ============================================
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique // "MANAGER", "SUPER_STAFF", "STAFF"
+  displayName String // "Quản lý", "Trưởng nhóm", "Nhân viên"
+  description String?
+  level       Int     @default(0) // Cấp độ: 3=Manager, 2=SuperStaff, 1=Staff
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  name        String  @unique // "manage_all_employees", "approve_schedule"
+  displayName String // "Quản lý toàn bộ nhân viên"
+  resource    String // "employee", "schedule", "attendance"
+  action      String // "create", "read", "update", "delete", "approve"
+  description String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id String @id @default(uuid())
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================
+// 3. USER - Quản lý nhân viên
+// ============================================
+
+model User {
+  id       String  @id @default(uuid())
+  email    String  @unique
+  password String
+  fullName String
+  phone    String?
+
+  // Vai trò (Role từ bảng riêng)
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  employmentType EmploymentType @default(FULL_TIME)
+  isActive       Boolean        @default(true)
+
+  // Full-time: ngày nghỉ cố định trong tuần
+  fixedDayOff DayOfWeek?
+
+  // Quan hệ phân cấp tổ chức (Organizational Hierarchy)
+  // Quan trọng: managerId xác định PHẠM VI quản lý
+  managerId    String?
+  manager      User?   @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates User[]  @relation("ManagerSubordinates")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  schedules         WorkSchedule[] @relation("EmployeeSchedules")
+  approvedSchedules WorkSchedule[] @relation("ApprovedSchedules")
+  shifts            Shift[]
+  attendances       Attendance[]
+  leaveRequests     LeaveRequest[] @relation("EmployeeLeaveRequests")
+  approvedLeaves    LeaveRequest[] @relation("ApprovedLeaveRequests")
+  activityLogs      ActivityLog[]
+
+  @@map("users")
+}
+
+// ============================================
+// 4. WORK SCHEDULE - Lịch làm việc theo tuần
+// ============================================
+// 
+// 📌 QUY ĐỊNH QUAN TRỌNG:
+// - Cả Full-time và Part-time đều PHẢI đăng ký lịch trước ít nhất 1 TUẦN
+// - KHÔNG cho phép đăng ký lịch trong tuần đang diễn ra
+// - KHÔNG có đăng ký gấp theo ngày
+// - Lịch phải được duyệt (APPROVED) trước khi có hiệu lực
+// - Chỉ lịch đã LOCKED mới được dùng để chấm công
+//
+// Ví dụ: Hôm nay là 14/01/2026 (Tuần 3)
+// → Nhân viên chỉ được đăng ký cho Tuần 4 trở đi (từ 19/01/2026)
+// → Không thể đăng ký cho Tuần 3 (đang diễn ra)
+
+model WorkSchedule {
+  id String @id @default(uuid())
+
+  // Thông tin tuần làm việc
+  // CHỈ LƯU weekStartDate - các trường khác tính toán ở application layer
+  weekStartDate DateTime // Ngày bắt đầu tuần (Monday) - tuần ĐƯỢC ĐĂNG KÝ
+
+  // Nhân viên
+  employeeId String
+  employee   User   @relation("EmployeeSchedules", fields: [employeeId], references: [id])
+
+  // Thời điểm đăng ký (để validation quy định 1 tuần trước)
+  submittedAt DateTime @default(now()) // Thời điểm nhân viên submit lịch
+
+  // Trạng thái
+  status ScheduleStatus @default(PENDING)
+
+  // Người duyệt
+  approvedById String?
+  approvedBy   User?     @relation("ApprovedSchedules", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  // Người khóa lịch (thường là Manager)
+  lockedAt DateTime? // Thời điểm khóa lịch (chuyển sang LOCKED)
+
+  // Ghi chú
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shifts Shift[]
+
+  @@unique([employeeId, weekStartDate])
+  @@index([weekStartDate, status]) // Tối ưu query theo tuần và trạng thái
+  @@index([employeeId, status]) // Tối ưu query lịch của nhân viên
+  @@map("work_schedules")
+}
+
+// ============================================
+// 5. SHIFT - Ca làm việc cụ thể
+// ============================================
+
+model Shift {
+  id String @id @default(uuid())
+
+  // Liên kết lịch làm việc
+  scheduleId String
+  schedule   WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Thông tin ca
+  employeeId String
+  employee   User   @relation(fields: [employeeId], references: [id])
+
+  date      DateTime  @db.Date
+  shiftType ShiftType
+
+  // Thời gian ca làm việc
+  startTime DateTime @db.Time
+  endTime   DateTime @db.Time
+
+  // Ghi chú
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  attendance Attendance?
+
+  @@unique([scheduleId, date, shiftType])
+  @@index([date, shiftType]) // Query nhanh ca theo ngày và loại
+  @@map("shifts")
+}
+
+// ============================================
+// 6. ATTENDANCE - Chấm công thực tế
+// ============================================
+
+model Attendance {
+  id String @id @default(uuid())
+
+  // Liên kết ca làm việc
+  shiftId String @unique
+  shift   Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  // Nhân viên
+  employeeId String
+  employee   User   @relation(fields: [employeeId], references: [id])
+
+  // Thời gian chấm công thực tế
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+
+  // Tổng giờ làm (tính bằng phút)
+  totalMinutes Int?
+
+  // Trạng thái
+  status AttendanceStatus @default(PRESENT)
+
+  // Ghi chú
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("attendances")
+}
+
+// ============================================
+// 7. LEAVE REQUEST - Yêu cầu nghỉ phép
+// ============================================
+
+model LeaveRequest {
+  id String @id @default(uuid())
+
+  // Nhân viên yêu cầu
+  employeeId String
+  employee   User   @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
+
+  // Thông tin nghỉ
+  leaveType LeaveType
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  reason    String
+
+  // Trạng thái
+  status LeaveStatus @default(PENDING)
+
+  // Người duyệt
+  approvedById    String?
+  approvedBy      User?     @relation("ApprovedLeaveRequests", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("leave_requests")
+}
+
+// ============================================
+// 8. ACTIVITY LOG - Nhật ký hoạt động
+// ============================================
+
+model ActivityLog {
+  id String @id @default(uuid())
+
+  // Người thực hiện
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Thông tin hoạt động
+  action   String // VD: "CREATE_SCHEDULE", "APPROVE_LEAVE", "CHECK_IN"
+  entity   String // VD: "WorkSchedule", "LeaveRequest", "Attendance"
+  entityId String? // ID của entity được tác động
+
+  // Chi tiết
+  description String
+  metadata    Json? // Dữ liệu bổ sung dạng JSON
+
+  // IP và User Agent
+  ipAddress String?
+  userAgent String?
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
+}

@@ -1,0 +1,93 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { Router } from '@angular/router';
+import { LoginRequest, LoginResponse, User } from '@core/models/auth.model';
+import { environment } from '../../../environments/environment';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  
+  private readonly API_URL = environment.apiUrl;
+  private readonly TOKEN_KEY = 'auth_token';
+  private readonly USER_KEY = 'auth_user';
+
+  private currentUserSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
+  public currentUser$ = this.currentUserSubject.asObservable();
+
+  constructor() {
+    // Load user from storage on init
+    const user = this.getUserFromStorage();
+    if (user) {
+      this.currentUserSubject.next(user);
+    }
+  }
+
+  login(credentials: LoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.API_URL}/auth/login`, credentials).pipe(
+      tap(response => {
+        this.setSession(response);
+        this.currentUserSubject.next(response.user);
+      })
+    );
+  }
+
+  refreshCurrentUser(): Observable<User> {
+    return this.http.get<User>(`${this.API_URL}/auth/me`).pipe(
+      tap(user => {
+        // Update user in storage and subject
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        this.currentUserSubject.next(user);
+      })
+    );
+  }
+
+  logout(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.USER_KEY);
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  getCurrentUser(): User | null {
+    return this.currentUserSubject.value;
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
+  }
+
+  hasPermission(permission: string): boolean {
+    const user = this.getCurrentUser();
+    return user?.permissions?.includes(permission) ?? false;
+  }
+
+  hasRole(roleName: string): boolean {
+    const user = this.getCurrentUser();
+    return user?.role?.name?.toLowerCase() === roleName.toLowerCase();
+  }
+
+  hasAnyRole(roleNames: string[]): boolean {
+    const user = this.getCurrentUser();
+    const userRole = user?.role?.name?.toLowerCase();
+    return roleNames.some(role => role.toLowerCase() === userRole);
+  }
+
+  private setSession(authResult: LoginResponse): void {
+    localStorage.setItem(this.TOKEN_KEY, authResult.accessToken);
+    localStorage.setItem(this.USER_KEY, JSON.stringify(authResult.user));
+  }
+
+  private getUserFromStorage(): User | null {
+    const userJson = localStorage.getItem(this.USER_KEY);
+    return userJson ? JSON.parse(userJson) : null;
+  }
+}
