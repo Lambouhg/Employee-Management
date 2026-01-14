@@ -1,0 +1,84 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Employee Management</h1>
+      <p>Đăng nhập vào hệ thống</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="example@company.com"
+          [class.error]="email?.invalid && email?.touched"
+        />
+        @if (email?.invalid && email?.touched) {
+          <div class="error-message">
+            @if (email?.errors?.['required']) {
+              <span>Email là bắt buộc</span>
+            }
+            @if (email?.errors?.['email']) {
+              <span>Email không hợp lệ</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="••••••••"
+          [class.error]="password?.invalid && password?.touched"
+        />
+        @if (password?.invalid && password?.touched) {
+          <div class="error-message">
+            @if (password?.errors?.['required']) {
+              <span>Mật khẩu là bắt buộc</span>
+            }
+            @if (password?.errors?.['minlength']) {
+              <span>Mật khẩu phải có ít nhất 6 ký tự</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Error Message -->
+      @if (errorMessage) {
+        <div class="alert alert-error">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        [disabled]="isLoading"
+        class="btn-primary"
+      >
+        @if (isLoading) {
+          <span class="spinner"></span>
+          <span>Đang xử lý...</span>
+        } @else {
+          <span>Đăng nhập</span>
+        }
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p class="demo-accounts">
+        <strong>Tài khoản demo:</strong><br>
+        Admin: admin@example.com / admin123<br>
+        Manager: manager@example.com / admin123<br>
+        Staff: staff1@example.com / admin123
+      </p>
+    </div>
+  </div>
+</div>
