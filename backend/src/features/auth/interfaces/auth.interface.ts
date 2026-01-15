@@ -18,6 +18,11 @@ export interface LoginResponse {
       displayName: string;
       level: number;
     };
+    department?: {
+      id: string;
+      name: string;
+      code: string;
+    } | null;
     employmentType: string;
   };
 }

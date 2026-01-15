@@ -1,0 +1,61 @@
+<aside class="w-62 bg-white border-r border-gray-200 flex flex-col h-screen">
+  <!-- Logo -->
+  <div class="p-5 flex items-center gap-3">
+    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+      M
+    </div>
+    <h2 class="text-lg font-semibold text-gray-900">EMM</h2>
+  </div>
+  
+  <nav class="flex-1 flex flex-col px-3 py-4 overflow-y-auto">
+    <!-- Menu Items -->
+    <div class="flex-1 space-y-1">
+      @for (item of menuItems; track item.route) {
+        @if (shouldShowMenuItem(item)) {
+          <button 
+            (click)="navigateTo(item.route)" 
+            [class]="isActive(item.route) 
+              ? 'w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 transition-all'
+              : 'w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 transition-all'"
+          >
+            <i-lucide [img]="item.icon" class="w-5 h-5"></i-lucide>
+            <span class="text-sm font-medium">{{ item.label }}</span>
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="space-y-1 mt-4 pt-4 border-t border-gray-200">
+      <button 
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 transition-all"
+      >
+        <i-lucide [img]="Settings" class="w-5 h-5"></i-lucide>
+        <span class="text-sm font-medium">Setting</span>
+      </button>
+      
+      <button 
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 transition-all"
+      >
+        <i-lucide [img]="HelpCircle" class="w-5 h-5"></i-lucide>
+        <span class="text-sm font-medium">Support</span>
+      </button>
+    </div>
+
+    <!-- User Info -->
+    <div class="mt-4 pt-4 border-t border-gray-200">
+      <button 
+        class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all group"
+      >
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+          {{ getUserInitials() }}
+        </div>
+        <div class="flex-1 min-w-0 text-left">
+          <div class="text-sm font-medium text-gray-900 truncate">{{ currentUser?.fullName }}</div>
+          <div class="text-xs text-gray-500 truncate">{{ currentUser?.email }}</div>
+        </div>
+        <i-lucide [img]="ChevronDown" class="w-4 h-4 text-gray-400"></i-lucide>
+      </button>
+    </div>
+  </nav>
+</aside>

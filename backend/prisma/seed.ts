@@ -4,299 +4,365 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 
+// Use DATABASE_URL from .env
 const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is not defined in environment variables');
+}
+
 const pool = new Pool({ connectionString: databaseUrl });
 const adapter = new PrismaPg(pool);
+
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // 1. Xóa dữ liệu cũ (nếu có) - theo thứ tự dependency
-  console.log('🗑️  Cleaning old data...');
+  // ============================================
+  // 0. CLEAR EXISTING DATA
+  // ============================================
+  console.log('\n🗑️  Clearing existing data...');
   
-  // Xóa các bảng phụ thuộc trước
-  try {
-    await prisma.$executeRaw`TRUNCATE TABLE "activity_logs" CASCADE`;
-  } catch (e) {
-    console.log('ℹ️  activity_logs table not found or already empty');
-  }
+  // Xóa các bảng phụ thuộc User trước
+  await prisma.activityLog.deleteMany();
+  console.log('✅ Cleared activity logs');
   
+  await prisma.attendance.deleteMany();
+  console.log('✅ Cleared attendances');
+  
+  await prisma.shift.deleteMany();
+  console.log('✅ Cleared shifts');
+  
+  await prisma.workSchedule.deleteMany();
+  console.log('✅ Cleared work schedules');
+  
+  await prisma.leaveRequest.deleteMany();
+  console.log('✅ Cleared leave requests');
+  
+  // Xóa RolePermission
   await prisma.rolePermission.deleteMany();
-  await prisma.permission.deleteMany();
+  console.log('✅ Cleared role permissions');
+  
+  // Xóa User
   await prisma.user.deleteMany();
+  console.log('✅ Cleared users');
+  
+  // Xóa Department
+  await prisma.department.deleteMany();
+  console.log('✅ Cleared departments');
+  
+  // Xóa Permission và Role
+  await prisma.permission.deleteMany();
+  console.log('✅ Cleared permissions');
+  
   await prisma.role.deleteMany();
+  console.log('✅ Cleared roles');
 
-  // 2. Tạo Permissions
-  console.log('📝 Creating permissions...');
-  const permissions = await Promise.all([
-    // Employee management
-    prisma.permission.create({
-      data: {
-        name: 'manage_all_employees',
-        displayName: 'Quản lý toàn bộ nhân viên',
-        resource: 'employee',
-        action: 'manage_all',
-        description: 'Có thể xem và quản lý tất cả nhân viên',
-      },
-    }),
-    prisma.permission.create({
-      data: {
-        name: 'manage_subordinates',
-        displayName: 'Quản lý nhân viên cấp dưới',
-        resource: 'employee',
-        action: 'manage_subordinates',
-        description: 'Chỉ có thể quản lý nhân viên thuộc quyền',
-      },
-    }),
-    // Schedule management
-    prisma.permission.create({
-      data: {
-        name: 'approve_all_schedules',
-        displayName: 'Duyệt lịch tất cả nhân viên',
-        resource: 'schedule',
-        action: 'approve_all',
-        description: 'Có thể duyệt lịch của tất cả nhân viên',
-      },
-    }),
-    prisma.permission.create({
-      data: {
-        name: 'approve_subordinate_schedules',
-        displayName: 'Duyệt lịch nhân viên cấp dưới',
-        resource: 'schedule',
-        action: 'approve_subordinates',
-        description: 'Chỉ có thể duyệt lịch nhân viên thuộc quyền',
-      },
-    }),
-    // Attendance management
-    prisma.permission.create({
-      data: {
-        name: 'manage_all_attendance',
-        displayName: 'Quản lý chấm công toàn bộ',
-        resource: 'attendance',
-        action: 'manage_all',
-        description: 'Có thể xem và chấm công cho tất cả',
-      },
-    }),
-    prisma.permission.create({
-      data: {
-        name: 'manage_subordinate_attendance',
-        displayName: 'Quản lý chấm công cấp dưới',
-        resource: 'attendance',
-        action: 'manage_subordinates',
-        description: 'Chỉ có thể chấm công cho nhân viên thuộc quyền',
-      },
-    }),
-    // Leave requests
-    prisma.permission.create({
-      data: {
-        name: 'approve_all_leaves',
-        displayName: 'Duyệt nghỉ phép toàn bộ',
-        resource: 'leave',
-        action: 'approve_all',
-        description: 'Có thể duyệt yêu cầu nghỉ của tất cả',
-      },
-    }),
-    prisma.permission.create({
-      data: {
-        name: 'approve_subordinate_leaves',
-        displayName: 'Duyệt nghỉ phép cấp dưới',
-        resource: 'leave',
-        action: 'approve_subordinates',
-        description: 'Chỉ có thể duyệt nghỉ của nhân viên thuộc quyền',
-      },
-    }),
-  ]);
-
-  console.log(`✅ Created ${permissions.length} permissions`);
-
-  // 3. Tạo Roles
-  console.log('👥 Creating roles...');
-  const adminRole = await prisma.role.create({
-    data: {
-      name: 'ADMIN',
-      displayName: 'Quản trị viên',
-      description: 'Quyền cao nhất, quản lý toàn bộ hệ thống',
-      level: 100,
-    },
-  });
-
-  const managerRole = await prisma.role.create({
-    data: {
+  // ============================================
+  // 1. SEED ROLES
+  // ============================================
+  console.log('\n📋 Seeding roles...');
+  
+  const roles = [
+    {
       name: 'MANAGER',
       displayName: 'Quản lý',
-      description: 'Quản lý tất cả nhân viên và hoạt động',
+      description: 'Quản lý toàn công ty, có quyền quản lý tất cả departments',
       level: 3,
     },
-  });
-
-  const superStaffRole = await prisma.role.create({
-    data: {
-      name: 'SUPER_STAFF',
-      displayName: 'Trưởng nhóm',
-      description: 'Quản lý nhân viên cấp dưới',
+    {
+      name: 'DEPT_MANAGER',
+      displayName: 'Trưởng phòng',
+      description: 'Quản lý department, có quyền quản lý users trong phòng của mình',
       level: 2,
     },
-  });
-
-  const staffRole = await prisma.role.create({
-    data: {
+    {
       name: 'STAFF',
       displayName: 'Nhân viên',
-      description: 'Nhân viên thông thường',
+      description: 'Nhân viên thường, chỉ quản lý thông tin cá nhân',
       level: 1,
     },
-  });
+  ];
 
-  console.log('✅ Created 4 roles');
+  for (const role of roles) {
+    await prisma.role.upsert({
+      where: { name: role.name },
+      update: {},
+      create: role,
+    });
+    console.log(`✅ Created role: ${role.name}`);
+  }
 
-  // 4. Gán Permissions cho Roles
-  console.log('🔗 Assigning permissions to roles...');
-  
-  // ADMIN - có tất cả quyền
-  await Promise.all(
-    permissions.map((perm) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: adminRole.id,
-          permissionId: perm.id,
+  // ============================================
+  // 2. SEED PERMISSIONS
+  // ============================================
+  console.log('\n🔐 Seeding permissions...');
+
+  const permissions = [
+    // Employee permissions
+    { name: 'manage_all_employees', displayName: 'Quản lý toàn bộ nhân viên', resource: 'employee', action: 'manage' },
+    { name: 'manage_dept_employees', displayName: 'Quản lý nhân viên trong phòng', resource: 'employee', action: 'manage_dept' },
+    { name: 'view_all_employees', displayName: 'Xem toàn bộ nhân viên', resource: 'employee', action: 'read_all' },
+    { name: 'view_dept_employees', displayName: 'Xem nhân viên trong phòng', resource: 'employee', action: 'read_dept' },
+    { name: 'view_own_profile', displayName: 'Xem hồ sơ cá nhân', resource: 'employee', action: 'read_own' },
+    
+    // Schedule permissions
+    { name: 'approve_all_schedules', displayName: 'Duyệt lịch toàn công ty', resource: 'schedule', action: 'approve_all' },
+    { name: 'approve_dept_schedules', displayName: 'Duyệt lịch trong phòng', resource: 'schedule', action: 'approve_dept' },
+    { name: 'create_schedule', displayName: 'Tạo lịch làm việc', resource: 'schedule', action: 'create' },
+    { name: 'view_own_schedule', displayName: 'Xem lịch cá nhân', resource: 'schedule', action: 'read_own' },
+    
+    // Leave permissions
+    { name: 'approve_all_leaves', displayName: 'Duyệt nghỉ phép toàn công ty', resource: 'leave', action: 'approve_all' },
+    { name: 'approve_dept_leaves', displayName: 'Duyệt nghỉ phép trong phòng', resource: 'leave', action: 'approve_dept' },
+    { name: 'create_leave_request', displayName: 'Tạo yêu cầu nghỉ phép', resource: 'leave', action: 'create' },
+    
+    // Attendance permissions
+    { name: 'view_all_attendance', displayName: 'Xem chấm công toàn công ty', resource: 'attendance', action: 'read_all' },
+    { name: 'view_dept_attendance', displayName: 'Xem chấm công trong phòng', resource: 'attendance', action: 'read_dept' },
+    { name: 'check_in_out', displayName: 'Chấm công', resource: 'attendance', action: 'checkin' },
+    
+    // Department permissions
+    { name: 'manage_departments', displayName: 'Quản lý phòng ban', resource: 'department', action: 'manage' },
+  ];
+
+  for (const permission of permissions) {
+    await prisma.permission.upsert({
+      where: { name: permission.name },
+      update: {},
+      create: permission,
+    });
+  }
+  console.log(`✅ Created ${permissions.length} permissions`);
+
+  // ============================================
+  // 3. ASSIGN PERMISSIONS TO ROLES
+  // ============================================
+  console.log('\n🔗 Assigning permissions to roles...');
+
+  // Get roles
+  const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
+  const deptManagerRole = await prisma.role.findUnique({ where: { name: 'DEPT_MANAGER' } });
+  const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
+
+  // MANAGER permissions (all permissions)
+  const allPermissions = await prisma.permission.findMany();
+  for (const permission of allPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: managerRole!.id,
+          permissionId: permission.id,
         },
-      }),
-    ),
-  );
+      },
+      update: {},
+      create: {
+        roleId: managerRole!.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+  console.log(`✅ Assigned ${allPermissions.length} permissions to MANAGER`);
 
-  // MANAGER - có tất cả quyền quản lý
-  const managerPermissions = permissions.filter((p) =>
-    p.name.includes('all') || p.name.includes('manage'),
-  );
-  await Promise.all(
-    managerPermissions.map((perm) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: managerRole.id,
-          permissionId: perm.id,
+  // DEPT_MANAGER permissions
+  const deptManagerPermissions = await prisma.permission.findMany({
+    where: {
+      name: {
+        in: [
+          'manage_dept_employees',
+          'view_dept_employees',
+          'view_own_profile',
+          'approve_dept_schedules',
+          'create_schedule',
+          'view_own_schedule',
+          'approve_dept_leaves',
+          'create_leave_request',
+          'view_dept_attendance',
+          'check_in_out',
+        ],
+      },
+    },
+  });
+  for (const permission of deptManagerPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: deptManagerRole!.id,
+          permissionId: permission.id,
         },
-      }),
-    ),
-  );
+      },
+      update: {},
+      create: {
+        roleId: deptManagerRole!.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+  console.log(`✅ Assigned ${deptManagerPermissions.length} permissions to DEPT_MANAGER`);
 
-  // SUPER_STAFF - chỉ quản lý subordinates
-  const superStaffPermissions = permissions.filter((p) =>
-    p.name.includes('subordinate'),
-  );
-  await Promise.all(
-    superStaffPermissions.map((perm) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: superStaffRole.id,
-          permissionId: perm.id,
+  // STAFF permissions
+  const staffPermissions = await prisma.permission.findMany({
+    where: {
+      name: {
+        in: [
+          'view_own_profile',
+          'create_schedule',
+          'view_own_schedule',
+          'create_leave_request',
+          'check_in_out',
+        ],
+      },
+    },
+  });
+  for (const permission of staffPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: staffRole!.id,
+          permissionId: permission.id,
         },
-      }),
-    ),
-  );
+      },
+      update: {},
+      create: {
+        roleId: staffRole!.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+  console.log(`✅ Assigned ${staffPermissions.length} permissions to STAFF`);
 
-  console.log('✅ Assigned permissions to roles');
+  // ============================================
+  // 4. SEED DEPARTMENTS
+  // ============================================
+  console.log('\n🏢 Seeding departments...');
 
-  // 5. Tạo Users mặc định
-  console.log('👤 Creating default users...');
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const departments = [
+    { name: 'Kinh doanh', code: 'SALES', description: 'Phòng kinh doanh' },
+    { name: 'Kỹ thuật', code: 'TECH', description: 'Phòng kỹ thuật' },
+    { name: 'Nhân sự', code: 'HR', description: 'Phòng nhân sự' },
+  ];
 
-  const adminUser = await prisma.user.create({
-    data: {
-      email: 'admin@example.com',
+  for (const dept of departments) {
+    await prisma.department.upsert({
+      where: { code: dept.code },
+      update: {},
+      create: dept,
+    });
+    console.log(`✅ Created department: ${dept.name}`);
+  }
+
+  // ============================================
+  // 5. SEED DEMO USERS
+  // ============================================
+  console.log('\n👥 Seeding demo users...');
+
+  const hashedPassword = await bcrypt.hash('123456', 10);
+
+  // Get departments
+  const salesDept = await prisma.department.findUnique({ where: { code: 'SALES' } });
+  const techDept = await prisma.department.findUnique({ where: { code: 'TECH' } });
+  const hrDept = await prisma.department.findUnique({ where: { code: 'HR' } });
+
+  // Create Manager (HR Manager)
+  const managerUser = await prisma.user.upsert({
+    where: { email: 'manager@company.com' },
+    update: {},
+    create: {
+      email: 'manager@company.com',
       password: hashedPassword,
-      fullName: 'Administrator',
-      phone: '0123456789',
+      fullName: 'Nguyễn Văn Quản Lý',
+      phone: '0901234567',
+      roleId: managerRole!.id,
+      departmentId: hrDept!.id,
       employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
       isActive: true,
-      roleId: adminRole.id,
     },
   });
+  console.log('✅ Created user: manager@company.com (password: 123456)');
 
-  const managerUser = await prisma.user.create({
-    data: {
-      email: 'manager@example.com',
+  // Create Dept Manager (Sales)
+  const salesManagerUser = await prisma.user.upsert({
+    where: { email: 'sales.manager@company.com' },
+    update: {},
+    create: {
+      email: 'sales.manager@company.com',
       password: hashedPassword,
-      fullName: 'Manager User',
-      phone: '0123456788',
+      fullName: 'Trần Thị Trưởng Phòng',
+      phone: '0902234567',
+      roleId: deptManagerRole!.id,
+      departmentId: salesDept!.id,
       employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
       isActive: true,
-      roleId: managerRole.id,
     },
   });
+  console.log('✅ Created user: sales.manager@company.com (password: 123456)');
 
-  const superStaffUser = await prisma.user.create({
-    data: {
-      email: 'superstaff@example.com',
+  // Create Tech Dept Manager
+  const techManagerUser = await prisma.user.upsert({
+    where: { email: 'tech.manager@company.com' },
+    update: {},
+    create: {
+      email: 'tech.manager@company.com',
       password: hashedPassword,
-      fullName: 'Super Staff User',
-      phone: '0123456786',
+      fullName: 'Phạm Văn Kỹ Thuật',
+      phone: '0904234567',
+      roleId: deptManagerRole!.id,
+      departmentId: techDept!.id,
       employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
       isActive: true,
-      roleId: superStaffRole.id,
-      managerId: managerUser.id, // Thuộc quyền Manager
     },
   });
+  console.log('✅ Created user: tech.manager@company.com (password: 123456)');
 
-  const staffUser1 = await prisma.user.create({
-    data: {
-      email: 'staff1@example.com',
+  // Create Staff
+  await prisma.user.upsert({
+    where: { email: 'staff@company.com' },
+    update: {},
+    create: {
+      email: 'staff@company.com',
       password: hashedPassword,
-      fullName: 'Staff User 1',
-      phone: '0123456787',
+      fullName: 'Lê Văn Nhân Viên',
+      phone: '0903234567',
+      roleId: staffRole!.id,
+      departmentId: techDept!.id,
       employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
       isActive: true,
-      roleId: staffRole.id,
-      managerId: superStaffUser.id, // Thuộc quyền Super Staff
     },
   });
+  console.log('✅ Created user: staff@company.com (password: 123456)');
 
-  const staffUser2 = await prisma.user.create({
-    data: {
-      email: 'staff2@example.com',
-      password: hashedPassword,
-      fullName: 'Staff User 2',
-      phone: '0123456785',
-      employmentType: 'PART_TIME',
-      isActive: true,
-      roleId: staffRole.id,
-      managerId: superStaffUser.id, // Thuộc quyền Super Staff
-    },
+  // ============================================
+  // 6. ASSIGN DEPARTMENT MANAGERS
+  // ============================================
+  console.log('\n👔 Assigning department managers...');
+
+  // Assign HR manager
+  await prisma.department.update({
+    where: { id: hrDept!.id },
+    data: { managerId: managerUser.id },
   });
+  console.log('✅ Assigned manager to HR department');
 
-  console.log('✅ Created 5 default users');
+  // Assign Sales manager
+  await prisma.department.update({
+    where: { id: salesDept!.id },
+    data: { managerId: salesManagerUser.id },
+  });
+  console.log('✅ Assigned manager to Sales department');
 
-  // 6. Summary
-  console.log('\n🎉 Seed completed successfully!\n');
-  console.log('📋 Default accounts:');
-  console.log('┌─────────────────────────────────────────────────────┐');
-  console.log('│ Admin Account:                                      │');
-  console.log('│   Email: admin@example.com                          │');
-  console.log('│   Password: admin123                                │');
-  console.log('│   Role: Administrator (Full access)                 │');
-  console.log('├─────────────────────────────────────────────────────┤');
-  console.log('│ Manager Account:                                    │');
-  console.log('│   Email: manager@example.com                        │');
-  console.log('│   Password: admin123                                │');
-  console.log('│   Role: Manager (Quản lý toàn bộ, duyệt lịch)       │');
-  console.log('├─────────────────────────────────────────────────────┤');
-  console.log('│ Super Staff Account:                                │');
-  console.log('│   Email: superstaff@example.com                     │');
-  console.log('│   Password: admin123                                │');
-  console.log('│   Role: Trưởng nhóm (Quản lý nhóm nhân viên)        │');
-  console.log('├─────────────────────────────────────────────────────┤');
-  console.log('│ Staff 1 (Full-time):                                │');
-  console.log('│   Email: staff1@example.com                         │');
-  console.log('│   Password: admin123                                │');
-  console.log('│   Manager: Super Staff                              │');
-  console.log('├─────────────────────────────────────────────────────┤');
-  console.log('│ Staff 2 (Part-time):                                │');
-  console.log('│   Email: staff2@example.com                         │');
-  console.log('│   Password: admin123                                │');
-  console.log('│   Manager: Super Staff                              │');
-  console.log('└─────────────────────────────────────────────────────┘');
-  console.log('\n💡 Run: npm run start:dev');
-  console.log('📚 Swagger: http://localhost:3000/api-docs\n');
+  // Assign Tech manager
+  await prisma.department.update({
+    where: { id: techDept!.id },
+    data: { managerId: techManagerUser.id },
+  });
+  console.log('✅ Assigned manager to Tech department');
+
+  console.log('\n✨ Seed completed successfully!');
 }
 
 main()

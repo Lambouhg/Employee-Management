@@ -75,10 +75,10 @@ enum ShiftType {
 
 model Role {
   id          String  @id @default(uuid())
-  name        String  @unique // "MANAGER", "SUPER_STAFF", "STAFF"
-  displayName String // "Quản lý", "Trưởng nhóm", "Nhân viên"
+  name        String  @unique // "MANAGER", "DEPT_MANAGER", "STAFF"
+  displayName String // "Quản lý", "Trưởng phòng", "Nhân viên"
   description String?
-  level       Int     @default(0) // Cấp độ: 3=Manager, 2=SuperStaff, 1=Staff
+  level       Int     @default(0) // Cấp độ: 3=Manager, 2=DeptManager, 1=Staff
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -127,7 +127,39 @@ model RolePermission {
 }
 
 // ============================================
-// 3. USER - Quản lý nhân viên
+// 3. DEPARTMENT - Phòng ban / Bộ phận
+// ============================================
+
+model Department {
+  id          String  @id @default(uuid())
+  name        String  @unique // "Kinh doanh", "Kỹ thuật", "Nhân sự"
+  code        String  @unique // "SALES", "TECH", "HR"
+  description String?
+
+  // Trưởng phòng (Department Manager)
+  managerId String? @unique
+  manager   User?   @relation("DepartmentManager", fields: [managerId], references: [id])
+
+  // Phòng ban cha (cho cấu trúc phân cấp)
+  parentId       String?
+  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  subDepartments Department[] @relation("DepartmentHierarchy")
+
+  // Trạng thái
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  employees User[] @relation("DepartmentEmployees")
+
+  @@map("departments")
+}
+
+// ============================================
+// 4. USER - Quản lý nhân viên
 // ============================================
 
 model User {
@@ -141,6 +173,13 @@ model User {
   roleId String
   role   Role   @relation(fields: [roleId], references: [id])
 
+  // Phòng ban
+  departmentId String?
+  department   Department? @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+
+  // Nếu là trưởng phòng
+  managedDepartment Department? @relation("DepartmentManager")
+
   employmentType EmploymentType @default(FULL_TIME)
   isActive       Boolean        @default(true)
 
@@ -148,7 +187,11 @@ model User {
   fixedDayOff DayOfWeek?
 
   // Quan hệ phân cấp tổ chức (Organizational Hierarchy)
-  // Quan trọng: managerId xác định PHẠM VI quản lý
+  // managerId: Người quản lý trực tiếp (line manager)
+  // Dùng để:
+  // - Phê duyệt lịch làm việc
+  // - Phê duyệt nghỉ phép
+  // - Xem báo cáo của subordinates
   managerId    String?
   manager      User?   @relation("ManagerSubordinates", fields: [managerId], references: [id])
   subordinates User[]  @relation("ManagerSubordinates")
@@ -159,13 +202,16 @@ model User {
 
   // Relations
   schedules         WorkSchedule[] @relation("EmployeeSchedules")
-  approvedSchedules WorkSchedule[] @relation("ApprovedSchedules")
+  a5provedSchedules WorkSchedule[] @relation("ApprovedSchedules")
   shifts            Shift[]
   attendances       Attendance[]
   leaveRequests     LeaveRequest[] @relation("EmployeeLeaveRequests")
   approvedLeaves    LeaveRequest[] @relation("ApprovedLeaveRequests")
   activityLogs      ActivityLog[]
 
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([roleId])
   @@map("users")
 }
 
@@ -226,7 +272,7 @@ model WorkSchedule {
 }
 
 // ============================================
-// 5. SHIFT - Ca làm việc cụ thể
+// 6. SHIFT - Ca làm việc cụ thể
 // ============================================
 
 model Shift {
@@ -263,7 +309,7 @@ model Shift {
 }
 
 // ============================================
-// 6. ATTENDANCE - Chấm công thực tế
+// 7. ATTENDANCE - Chấm công thực tế
 // ============================================
 
 model Attendance {
@@ -298,7 +344,7 @@ model Attendance {
 }
 
 // ============================================
-// 7. LEAVE REQUEST - Yêu cầu nghỉ phép
+// 8. LEAVE REQUEST - Yêu cầu nghỉ phép
 // ============================================
 
 model LeaveRequest {
@@ -331,7 +377,7 @@ model LeaveRequest {
 }
 
 // ============================================
-// 8. ACTIVITY LOG - Nhật ký hoạt động
+// 9. ACTIVITY LOG - Nhật ký hoạt động
 // ============================================
 
 model ActivityLog {

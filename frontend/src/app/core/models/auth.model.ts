@@ -5,6 +5,7 @@ export interface User {
   fullName: string;
   phone?: string;
   role: Role;
+  department?: Department;
   employmentType: 'FULL_TIME' | 'PART_TIME';
   isActive?: boolean;
   permissions?: string[];
@@ -20,9 +21,22 @@ export interface UserBasic {
 
 export interface Role {
   id: string;
-  name: string;
+  name: string; // 'MANAGER', 'DEPT_MANAGER', 'STAFF'
   displayName: string;
-  level: number;
+  level: number; // 3, 2, 1
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  parentId?: string;
+  manager?: UserBasic;
+  _count?: {
+    employees: number;
+    subDepartments: number;
+  };
 }
 
 export interface LoginRequest {

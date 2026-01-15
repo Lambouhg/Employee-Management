@@ -28,6 +28,13 @@ export class AuthService {
             },
           },
         },
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
     }) as any;
 
@@ -81,6 +88,7 @@ export class AuthService {
           displayName: (user.role as any).displayName,
           level: (user.role as any).level,
         },
+        department: user.department,
         employmentType: user.employmentType,
       },
     };
@@ -97,6 +105,13 @@ export class AuthService {
                 permission: true,
               },
             },
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
           },
         },
         manager: true,

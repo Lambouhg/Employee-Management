@@ -55,6 +55,12 @@ export class UpdateUserDto {
   @IsUUID(4, { message: 'Người quản lý phải là UUID hợp lệ' })
   managerId?: string;
 
+  @ApiPropertyOptional({ example: 'department-uuid' })
+  @IsOptional()
+  @ValidateIf((o) => o.departmentId !== null && o.departmentId !== undefined && o.departmentId !== '')
+  @IsUUID(4, { message: 'Phòng ban phải là UUID hợp lệ' })
+  departmentId?: string;
+
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()

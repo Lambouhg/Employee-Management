@@ -1,8 +1,1 @@
-.admin-dashboard {
-  padding: 40px;
-}
-
-.admin-dashboard h1 {
-  font-size: 32px;
-  color: #1a202c;
-}
+/* Admin dashboard styles moved to Tailwind classes in HTML */

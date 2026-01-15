@@ -57,14 +57,13 @@ export class LoginComponent {
   }
 
   private getDefaultRoute(roleName: string): string {
-    const role = roleName.toLowerCase();
+    const role = roleName.toUpperCase();
     switch (role) {
-      case 'admin':
-        return '/admin';
-      case 'manager':
+      case 'MANAGER':
         return '/manager';
-      case 'super_staff':
-      case 'staff':
+      case 'DEPT_MANAGER':
+        return '/manager'; // Department managers cũng dùng manager dashboard
+      case 'STAFF':
         return '/staff';
       default:
         return '/login';

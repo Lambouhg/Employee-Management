@@ -24,6 +24,11 @@ export class QueryUserDto {
   @IsOptional()
   managerId?: string;
 
+  @ApiPropertyOptional({ example: 'department-uuid', description: 'Lọc theo phòng ban' })
+  @IsString()
+  @IsOptional()
+  departmentId?: string;
+
   @ApiPropertyOptional({ example: true, description: 'Chỉ lấy nhân viên đang hoạt động' })
   @Transform(({ value }) => {
     if (value === 'true') return true;

@@ -13,29 +13,22 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/pages/login/login.component').then(m => m.LoginComponent)
   },
   {
-    path: '',
-    canActivate: [authGuard],
-    loadComponent: () => import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
-    children: [
-      {
-        path: 'admin',
-        canActivate: [roleGuard],
-        data: { roles: ['admin'] },
-        loadChildren: () => import('./features/dashboard/admin-dashboard/admin.routes').then(m => m.ADMIN_ROUTES)
-      },
-      {
-        path: 'manager',
-        canActivate: [roleGuard],
-        data: { roles: ['manager'] },
-        loadChildren: () => import('./features/dashboard/manager-dashboard/manager.routes').then(m => m.MANAGER_ROUTES)
-      },
-      {
-        path: 'staff',
-        canActivate: [roleGuard],
-        data: { roles: ['super_staff', 'staff'] },
-        loadChildren: () => import('./features/dashboard/staff-dashboard/staff.routes').then(m => m.STAFF_ROUTES)
-      }
-    ]
+    path: 'manager',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['MANAGER', 'DEPT_MANAGER'] },
+    loadChildren: () => import('./features/dashboard/manager-dashboard/manager.routes').then(m => m.MANAGER_ROUTES)
+  },
+  {
+    path: 'staff',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['STAFF'] },
+    loadChildren: () => import('./features/dashboard/staff-dashboard/staff.routes').then(m => m.STAFF_ROUTES)
+  },
+  {
+    path: 'admin',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] },
+    loadChildren: () => import('./features/dashboard/admin-dashboard/admin.routes').then(m => m.ADMIN_ROUTES)
   },
   {
     path: 'unauthorized',

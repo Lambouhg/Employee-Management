@@ -53,4 +53,10 @@ export class CreateUserDto {
   @ValidateIf((o) => o.managerId !== null && o.managerId !== undefined && o.managerId !== '')
   @IsUUID(4, { message: 'Người quản lý phải là UUID hợp lệ' })
   managerId?: string;
+
+  @ApiPropertyOptional({ example: 'department-uuid', description: 'ID của phòng ban' })
+  @IsOptional()
+  @ValidateIf((o) => o.departmentId !== null && o.departmentId !== undefined && o.departmentId !== '')
+  @IsUUID(4, { message: 'Phòng ban phải là UUID hợp lệ' })
+  departmentId?: string;
 }
