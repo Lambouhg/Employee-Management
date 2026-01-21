@@ -69,12 +69,18 @@ async function main() {
       name: 'MANAGER',
       displayName: 'Quản lý',
       description: 'Quản lý toàn công ty, có quyền quản lý tất cả departments',
-      level: 3,
+      level: 4,
     },
     {
       name: 'DEPT_MANAGER',
       displayName: 'Trưởng phòng',
       description: 'Quản lý department, có quyền quản lý users trong phòng của mình',
+      level: 3,
+    },
+    {
+      name: 'SUPERVISOR',
+      displayName: 'Giám sát',
+      description: 'Giám sát nhóm nhỏ, hỗ trợ trưởng phòng quản lý nhân viên',
       level: 2,
     },
     {
@@ -144,6 +150,7 @@ async function main() {
   // Get roles
   const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
   const deptManagerRole = await prisma.role.findUnique({ where: { name: 'DEPT_MANAGER' } });
+  const supervisorRole = await prisma.role.findUnique({ where: { name: 'SUPERVISOR' } });
   const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
 
   // MANAGER permissions (all permissions)
@@ -200,6 +207,38 @@ async function main() {
     });
   }
   console.log(`✅ Assigned ${deptManagerPermissions.length} permissions to DEPT_MANAGER`);
+
+  // SUPERVISOR permissions
+  const supervisorPermissions = await prisma.permission.findMany({
+    where: {
+      name: {
+        in: [
+          'view_dept_employees',
+          'view_own_profile',
+          'create_schedule',
+          'view_own_schedule',
+          'create_leave_request',
+          'check_in_out',
+        ],
+      },
+    },
+  });
+  for (const permission of supervisorPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: supervisorRole!.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: supervisorRole!.id,
+        permissionId: permission.id,
+      },
+    });
+  }
+  console.log(`✅ Assigned ${supervisorPermissions.length} permissions to SUPERVISOR`);
 
   // STAFF permissions
   const staffPermissions = await prisma.permission.findMany({
@@ -318,6 +357,43 @@ async function main() {
   });
   console.log('✅ Created user: tech.manager@company.com (password: 123456)');
 
+  // Create Supervisors
+  const salesSupervisor = await prisma.user.upsert({
+    where: { email: 'sales.supervisor@company.com' },
+    update: {},
+    create: {
+      email: 'sales.supervisor@company.com',
+      password: hashedPassword,
+      fullName: 'Lê Văn Giám Sát',
+      phone: '0905234567',
+      roleId: supervisorRole!.id,
+      departmentId: salesDept!.id,
+      managerId: salesManagerUser.id,
+      employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created user: sales.supervisor@company.com (password: 123456)');
+
+  const techSupervisor = await prisma.user.upsert({
+    where: { email: 'tech.supervisor@company.com' },
+    update: {},
+    create: {
+      email: 'tech.supervisor@company.com',
+      password: hashedPassword,
+      fullName: 'Hoàng Thị Giám Sát',
+      phone: '0906234567',
+      roleId: supervisorRole!.id,
+      departmentId: techDept!.id,
+      managerId: techManagerUser.id,
+      employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created user: tech.supervisor@company.com (password: 123456)');
+
   // Create Staff
   await prisma.user.upsert({
     where: { email: 'staff@company.com' },
@@ -329,6 +405,7 @@ async function main() {
       phone: '0903234567',
       roleId: staffRole!.id,
       departmentId: techDept!.id,
+      managerId: techSupervisor.id,
       employmentType: 'FULL_TIME',
       fixedDayOff: 'SUNDAY',
       isActive: true,

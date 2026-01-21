@@ -140,11 +140,6 @@ model Department {
   managerId String? @unique
   manager   User?   @relation("DepartmentManager", fields: [managerId], references: [id])
 
-  // Phòng ban cha (cho cấu trúc phân cấp)
-  parentId       String?
-  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  subDepartments Department[] @relation("DepartmentHierarchy")
-
   // Trạng thái
   isActive Boolean @default(true)
 

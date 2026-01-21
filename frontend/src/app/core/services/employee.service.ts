@@ -112,7 +112,7 @@ export class EmployeeService {
    * Lấy danh sách vai trò
    */
   getRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.apiUrl}/roles`);
+    return this.http.get<Role[]>(`${environment.apiUrl}/manager/roles`);
   }
 
   /**
@@ -126,10 +126,11 @@ export class EmployeeService {
    * Lấy danh sách phòng ban
    */
   getDepartments(includeEmployees: boolean = false): Observable<Department[]> {
+    // Departments are served under /manager/departments (not under employees)
     let params = new HttpParams();
     if (includeEmployees) {
       params = params.set('includeEmployees', 'true');
     }
-    return this.http.get<Department[]>(`${this.apiUrl}/departments`, { params });
+    return this.http.get<Department[]>(`${environment.apiUrl}/manager/departments`, { params });
   }
 }

@@ -1,0 +1,49 @@
+<div class="grid grid-cols-4 gap-4">
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500 font-medium">Total Employees</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">{{ metrics().total }}</p>
+      </div>
+      <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+        <i-lucide [img]="Users" class="w-6 h-6 text-blue-600"></i-lucide>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500 font-medium">Active</p>
+        <p class="text-2xl font-bold text-green-600 mt-1">{{ metrics().active }}</p>
+      </div>
+      <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+        <i-lucide [img]="UserCheck" class="w-6 h-6 text-green-600"></i-lucide>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500 font-medium">Managers</p>
+        <p class="text-2xl font-bold text-purple-600 mt-1">{{ metrics().managers }}</p>
+      </div>
+      <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+        <i-lucide [img]="BarChart3" class="w-6 h-6 text-purple-600"></i-lucide>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500 font-medium">Departments</p>
+        <p class="text-2xl font-bold text-indigo-600 mt-1">{{ metrics().departments }}</p>
+      </div>
+      <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+        <i-lucide [img]="Building2" class="w-6 h-6 text-indigo-600"></i-lucide>
+      </div>
+    </div>
+  </div>
+</div>

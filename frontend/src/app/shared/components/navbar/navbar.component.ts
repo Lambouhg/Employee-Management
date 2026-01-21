@@ -3,11 +3,18 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { User } from '@core/models/auth.model';
-import { LucideAngularModule, LayoutDashboard, Users, Settings, LogOut, ChevronRight, ChevronDown, HelpCircle } from 'lucide-angular';
+import {
+  LucideAngularModule,
+  Settings,
+  LogOut,
+  ChevronDown,
+  HelpCircle,
+  PanelLeft
+} from 'lucide-angular';
 
 export interface NavMenuItem {
   label: string;
-  icon: any; // Lucide icon component
+  icon: any;
   route: string;
   requiredPermission?: string;
   requiredRole?: string;
@@ -28,18 +35,32 @@ export class NavbarComponent {
   @Input() menuItems: NavMenuItem[] = [];
   @Input() activeRoute: string = '';
 
+  // Collapse state
+  isCollapsed = false;
+
   // Lucide icons
-  readonly LogOut = LogOut;
   readonly Settings = Settings;
   readonly HelpCircle = HelpCircle;
   readonly ChevronDown = ChevronDown;
+  readonly PanelLeft = PanelLeft;
+  readonly LogOut = LogOut;
 
- 
+  toggleCollapse(): void {
+    this.isCollapsed = !this.isCollapsed;
+  }
+
+  navigateTo(route: string): void {
+    this.router.navigate([route]);
+  }
+
+  isActive(route: string): boolean {
+    return this.activeRoute === route || this.router.url === route;
+  }
 
   getUserInitials(): string {
     if (!this.currentUser?.fullName) return '?';
     const names = this.currentUser.fullName.split(' ');
-    return names.length > 1 
+    return names.length > 1
       ? names[0][0] + names[names.length - 1][0]
       : names[0][0];
   }
@@ -55,17 +76,10 @@ export class NavbarComponent {
   }
 
   shouldShowMenuItem(item: NavMenuItem): boolean {
-    const hasPermission = this.hasPermission(item.requiredPermission);
-    const hasRole = this.hasRole(item.requiredRole);
-    return hasPermission && hasRole;
-  }
-
-  navigateTo(route: string): void {
-    this.router.navigate([route]);
-  }
-
-  isActive(route: string): boolean {
-    return this.activeRoute === route || this.router.url === route;
+    return (
+      this.hasPermission(item.requiredPermission) &&
+      this.hasRole(item.requiredRole)
+    );
   }
 
   logout(): void {

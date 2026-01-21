@@ -22,8 +22,39 @@ export interface Employee {
     id: string;
     fullName: string;
     email: string;
+    role: {
+      name: string;
+      displayName: string;
+      level: number;
+    };
+    department?: {
+      id: string;
+      name: string;
+      code: string;
+    };
   };
-  subordinates?: any[];
+  subordinates?: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: {
+      name: string;
+      displayName: string;
+      level: number;
+    };
+    employmentType: string;
+    isActive: boolean;
+  }[];
+  subordinatesCount?: number;
+  reportingChain?: {
+    id: string;
+    fullName: string;
+    role: {
+      name: string;
+      displayName: string;
+      level: number;
+    };
+  }[];
   permissions?: string[];
 }
 
@@ -47,7 +78,7 @@ export interface CreateEmployeeDto {
   departmentId?: string;
   employmentType: 'FULL_TIME' | 'PART_TIME';
   fixedDayOff?: string;
-  managerId?: string;
+  // managerId will be auto-assigned from department.manager
 }
 
 export interface UpdateEmployeeDto {
@@ -59,8 +90,8 @@ export interface UpdateEmployeeDto {
   departmentId?: string;
   employmentType?: 'FULL_TIME' | 'PART_TIME';
   fixedDayOff?: string;
-  managerId?: string;
   isActive?: boolean;
+  // managerId will be auto-assigned from department.manager
 }
 
 export interface SubordinatesResponse {

@@ -3,34 +3,21 @@ export interface Department {
   name: string;
   code: string;
   description?: string;
-  parentId?: string;
   isActive: boolean;
   createdAt: string;
   manager?: DepartmentManager;
   employees?: DepartmentEmployee[];
-  subDepartments?: {
-    id: string;
-    name: string;
-    code: string;
-  }[];
   _count?: {
     employees: number;
-    subDepartments: number;
   };
 }
 
 export interface DepartmentDetail extends Department {
-  parent?: {
-    id: string;
-    name: string;
-    code: string;
-  };
   statistics: {
     totalEmployees: number;
     activeEmployees: number;
     fullTimeEmployees: number;
     partTimeEmployees: number;
-    totalSubDepartments: number;
   };
 }
 
