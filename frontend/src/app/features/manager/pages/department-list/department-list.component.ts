@@ -31,7 +31,6 @@ import {
     LucideAngularModule,
     DepartmentFormModalComponent,
     AssignManagerModalComponent,
-    ManageEmployeesModalComponent
   ],
   templateUrl:'./department-list.component.html',
 })
@@ -63,6 +62,10 @@ export class DepartmentListComponent implements OnInit {
   selectedDepartmentId?: string;
   selectedDepartment?: Department;
 
+  // Cache department managers for faster access
+  departmentManagers: { id: string; fullName: string; email: string }[] = [];
+  isLoadingManagers = false;
+
   // Dropdown state
   openDropdownId: string | null = null;
 
@@ -72,6 +75,7 @@ export class DepartmentListComponent implements OnInit {
   ngOnInit(): void {
     this.loadDepartments();
     this.loadEmployees();
+    this.loadDepartmentManagers(); // Preload managers for faster modal opening
   }
 
   toggleExpanded(id: string): void {
@@ -106,6 +110,24 @@ export class DepartmentListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading employees:', err);
+      }
+    });
+  }
+
+  loadDepartmentManagers(): void {
+    this.isLoadingManagers = true;
+    this.employeeService.getDepartmentManagers().subscribe({
+      next: (managers) => {
+        this.departmentManagers = managers.map(manager => ({
+          id: manager.id,
+          fullName: manager.fullName,
+          email: manager.email
+        }));
+        this.isLoadingManagers = false;
+      },
+      error: (err) => {
+        console.error('Error loading department managers:', err);
+        this.isLoadingManagers = false;
       }
     });
   }

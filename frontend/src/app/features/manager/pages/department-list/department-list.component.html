@@ -40,9 +40,15 @@
               </div>
 
               <!-- Manager Info -->
-              <div *ngIf="dept.manager" class="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p class="text-xs text-gray-500 mb-1">Department Manager</p>
-                <div class="flex items-center gap-2">
+              <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-gray-500">Department Manager</p>
+                  <button (click)="openAssignManager(dept)" class="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <i-lucide [img]="UserCog" class="w-3 h-3"></i-lucide>
+                    <span>{{ dept.manager ? 'Change' : 'Assign' }}</span>
+                  </button>
+                </div>
+                <div *ngIf="dept.manager" class="flex items-center gap-2">
                   <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     {{ getInitials(dept.manager.fullName) }}
                   </div>
@@ -51,6 +57,7 @@
                     <p class="text-xs text-gray-500">{{ dept.manager.email }}</p>
                   </div>
                 </div>
+                <p *ngIf="!dept.manager" class="text-sm text-gray-400 italic">Chưa có quản lý phòng ban</p>
               </div>
 
               <!-- Stats -->
@@ -94,3 +101,13 @@
 
 <!-- Department Form Modal -->
 <app-department-form-modal *ngIf="showDepartmentForm" [departmentId]="editingDepartmentId" (closed)="closeDepartmentForm()" (saved)="onDepartmentSaved()"></app-department-form-modal>
+
+<!-- Assign Manager Modal -->
+<app-assign-manager-modal
+  *ngIf="showAssignManager"
+  [departmentId]="selectedDepartmentId"
+  [department]="selectedDepartment"
+  [managers]="departmentManagers"
+  (closed)="closeAssignManager()"
+  (saved)="onManagerAssigned()">
+</app-assign-manager-modal>

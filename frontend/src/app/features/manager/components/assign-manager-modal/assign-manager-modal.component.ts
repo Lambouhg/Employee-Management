@@ -1,4 +1,4 @@
-import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
@@ -15,16 +15,19 @@ import { LucideAngularModule, X, UserCog, Check, Info } from 'lucide-angular';
 export class AssignManagerModalComponent implements OnInit, OnChanges {
   @Input() departmentId?: string;
   @Input() department?: Department;
+  @Input() managers?: { id: string; fullName: string; email: string }[]; // Preloaded managers
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
   private departmentService = inject(DepartmentService);
   private employeeService = inject(EmployeeService);
+  private cdr = inject(ChangeDetectorRef);
 
   form!: FormGroup;
-  managers: { id: string; fullName: string; email: string }[] = [];
+  managersList: { id: string; fullName: string; email: string }[] = [];
   isSubmitting = false;
+  isLoadingManagers = false;
   errorMessage: string | null = null;
 
   readonly X = X;
@@ -34,14 +37,39 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.initForm();
-    this.loadManagers();
+    // Always try to update managers list on init
+    this.updateManagersList();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['department'] && this.department) {
-      this.form.patchValue({
-        managerId: this.department.manager?.id || null
-      });
+      // Use setTimeout to ensure form is ready
+      setTimeout(() => {
+        if (this.form) {
+          this.form.patchValue({
+            managerId: this.department?.manager?.id || null
+          });
+        }
+      }, 0);
+    }
+    // If managers are provided via input, use them immediately
+    if (changes['managers']) {
+      this.updateManagersList();
+    }
+  }
+
+  private updateManagersList(): void {
+    // Use preloaded managers if available, otherwise load them
+    if (this.managers && this.managers.length > 0) {
+      this.managersList = [...this.managers]; // Create new array reference
+      this.isLoadingManagers = false;
+      // Force change detection after a microtask to ensure DOM is updated
+      setTimeout(() => {
+        this.cdr.detectChanges();
+      }, 0);
+    } else if (!this.isLoadingManagers && this.managersList.length === 0) {
+      // Only load if we don't have managers and haven't started loading
+      this.loadManagers();
     }
   }
 
@@ -52,35 +80,35 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
   }
 
   loadManagers(): void {
-    console.log('Loading department managers...');
+    this.isLoadingManagers = true;
+    this.errorMessage = null;
+    
     // Use dedicated endpoint for department managers (DEPT_MANAGER only)
     this.employeeService.getDepartmentManagers().subscribe({
       next: (managers) => {
-        console.log('Raw managers response:', managers);
         if (!managers || managers.length === 0) {
-          console.warn('No department managers found');
           this.errorMessage = 'Không có quản lý phòng ban nào trong hệ thống';
-          this.managers = [];
+          this.managersList = [];
+          this.isLoadingManagers = false;
           return;
         }
-        this.managers = managers.map(manager => ({
+        this.managersList = managers.map(manager => ({
           id: manager.id,
           fullName: manager.fullName,
           email: manager.email
         }));
-        console.log('Loaded department managers:', this.managers);
         this.errorMessage = null;
+        this.isLoadingManagers = false;
+        // Force change detection after a microtask to ensure DOM is updated
+        setTimeout(() => {
+          this.cdr.detectChanges();
+        }, 0);
       },
       error: (err) => {
         console.error('Error loading department managers:', err);
-        console.error('Error details:', {
-          status: err.status,
-          statusText: err.statusText,
-          error: err.error,
-          url: err.url
-        });
         this.errorMessage = err.error?.message || 'Không thể tải danh sách quản lý phòng ban';
-        this.managers = [];
+        this.managersList = [];
+        this.isLoadingManagers = false;
       }
     });
   }
@@ -115,7 +143,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
     const managerId = this.form.value.managerId;
     if (!managerId) return 'Không có';
 
-    const manager = this.managers.find(m => m.id === managerId);
+    const manager = this.managersList.find(m => m.id === managerId);
     return manager ? manager.fullName : 'Không tìm thấy';
   }
 }

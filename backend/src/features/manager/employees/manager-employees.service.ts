@@ -438,6 +438,7 @@ export class ManagerEmployeesService {
 
   async getDepartmentManagers() {
     // Get only DEPT_MANAGER for department manager assignment
+    // Optimized: Only select essential fields for faster query
     const managers = await this.prisma.user.findMany({
       where: {
         isActive: true,
@@ -449,20 +450,8 @@ export class ManagerEmployeesService {
         id: true,
         fullName: true,
         email: true,
-        role: {
-          select: {
-            name: true,
-            displayName: true,
-            level: true,
-          },
-        },
-        department: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
-        },
+        // Removed role and department selects for better performance
+        // These are not needed for the dropdown selection
       },
       orderBy: { fullName: 'asc' },
     });
