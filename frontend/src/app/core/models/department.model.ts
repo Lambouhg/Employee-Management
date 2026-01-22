@@ -48,3 +48,10 @@ export interface DepartmentManager {
     level: number;
   };
 }
+
+export interface CreateDepartmentRequest {
+  name: string;
+  code: string;
+  description?: string;
+  managerId?: string;
+}

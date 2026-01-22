@@ -149,8 +149,32 @@ model Department {
 
   // Relations
   employees User[] @relation("DepartmentEmployees")
+  teams     Team[] @relation("DepartmentTeams")
 
   @@map("departments")
+}
+
+model Team {
+  id           String   @id @default(uuid())
+  name         String
+  code         String?  @unique
+
+  // Phòng ban (tuỳ chọn)
+  departmentId String?
+  department   Department? @relation("DepartmentTeams", fields: [departmentId], references: [id])
+
+  // Team lead (một lead cho một team)
+  leadId String? @unique
+  lead   User?   @relation("TeamLead", fields: [leadId], references: [id])
+
+  // Members
+  members User[] @relation("TeamMembers")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teams")
 }
 
 // ============================================
@@ -197,7 +221,14 @@ model User {
 
   // Relations
   schedules         WorkSchedule[] @relation("EmployeeSchedules")
-  a5provedSchedules WorkSchedule[] @relation("ApprovedSchedules")
+  approvedSchedules WorkSchedule[] @relation("ApprovedSchedules")
+  
+  // Team membership (optional)
+  teamId String?
+  team   Team? @relation("TeamMembers", fields: [teamId], references: [id])
+
+  // If the user is a team lead, link to managed team
+  managedTeam Team? @relation("TeamLead")
   shifts            Shift[]
   attendances       Attendance[]
   leaveRequests     LeaveRequest[] @relation("EmployeeLeaveRequests")
@@ -206,6 +237,7 @@ model User {
 
   @@index([departmentId])
   @@index([managerId])
+  @@index([teamId])
   @@index([roleId])
   @@map("users")
 }

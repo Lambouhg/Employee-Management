@@ -3,9 +3,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { 
-  Department, 
-  DepartmentDetail, 
+import {
+  Department,
+  DepartmentDetail,
+  CreateDepartmentRequest,
 } from '../models/department.model';
 
 @Injectable({
@@ -39,7 +40,7 @@ export class DepartmentService {
   /**
    * Create a new department
    */
-  create(data: Partial<Department>): Observable<Department> {
+  create(data: CreateDepartmentRequest): Observable<Department> {
     return this.http.post<Department>(`${environment.apiUrl}/manager/departments`, data);
   }
 

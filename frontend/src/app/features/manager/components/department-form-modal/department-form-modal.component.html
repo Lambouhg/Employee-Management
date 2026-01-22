@@ -28,14 +28,6 @@
           <label class="block text-sm font-medium mb-1">Description</label>
           <textarea formControlName="description" class="w-full p-2 border rounded"></textarea>
         </div>
-
-        <div class="col-span-2">
-          <label class="block text-sm font-medium mb-1">Manager</label>
-          <select formControlName="managerId" class="w-full p-2 border rounded bg-white">
-            <option value="">No manager</option>
-            <option *ngFor="let m of managers" [value]="m.id">{{ m.fullName }}</option>
-          </select>
-        </div>
       </div>
 
       <div class="mt-4 flex justify-end gap-2">

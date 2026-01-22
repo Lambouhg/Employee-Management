@@ -85,4 +85,8 @@ export class NavbarComponent {
   logout(): void {
     this.authService.logout();
   }
+
+  navigateToChangePassword(): void {
+    this.router.navigate(['/change-password']);
+  }
 }

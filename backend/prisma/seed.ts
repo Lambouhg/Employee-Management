@@ -68,25 +68,25 @@ async function main() {
     {
       name: 'MANAGER',
       displayName: 'Quản lý',
-      description: 'Quản lý toàn công ty, có quyền quản lý tất cả departments',
+      description: 'Quản lý cấp cao / Chủ hệ thống - Quản lý toàn bộ nhân sự, phòng ban, team. Có quyền khóa lịch tuần (LOCKED)',
       level: 4,
     },
     {
       name: 'DEPT_MANAGER',
       displayName: 'Trưởng phòng',
-      description: 'Quản lý department, có quyền quản lý users trong phòng của mình',
+      description: 'Quản lý hiệu suất & nguồn lực của phòng ban. Duyệt lịch tuần cấp 2, duyệt nghỉ phép',
       level: 3,
     },
     {
-      name: 'SUPERVISOR',
-      displayName: 'Giám sát',
-      description: 'Giám sát nhóm nhỏ, hỗ trợ trưởng phòng quản lý nhân viên',
+      name: 'TEAM_LEAD',
+      displayName: 'Trưởng nhóm',
+      description: 'Quản lý vi mô nhân viên trong Team. Duyệt lịch tuần cấp 1, duyệt nghỉ đột xuất',
       level: 2,
     },
     {
       name: 'STAFF',
       displayName: 'Nhân viên',
-      description: 'Nhân viên thường, chỉ quản lý thông tin cá nhân',
+      description: 'Nhân viên thường - Đăng ký lịch tuần, check-in/out, gửi yêu cầu nghỉ',
       level: 1,
     },
   ];
@@ -107,15 +107,19 @@ async function main() {
 
   const permissions = [
     // Employee permissions
-    { name: 'manage_all_employees', displayName: 'Quản lý toàn bộ nhân viên', resource: 'employee', action: 'manage' },
+    { name: 'manage_all_employees', displayName: 'Quản lý toàn bộ nhân viên', resource: 'employee', action: 'manage_all' },
     { name: 'manage_dept_employees', displayName: 'Quản lý nhân viên trong phòng', resource: 'employee', action: 'manage_dept' },
+    { name: 'manage_team_members', displayName: 'Quản lý thành viên trong team', resource: 'employee', action: 'manage_team' },
     { name: 'view_all_employees', displayName: 'Xem toàn bộ nhân viên', resource: 'employee', action: 'read_all' },
     { name: 'view_dept_employees', displayName: 'Xem nhân viên trong phòng', resource: 'employee', action: 'read_dept' },
+    { name: 'view_team_members', displayName: 'Xem thành viên trong team', resource: 'employee', action: 'read_team' },
     { name: 'view_own_profile', displayName: 'Xem hồ sơ cá nhân', resource: 'employee', action: 'read_own' },
     
     // Schedule permissions
     { name: 'approve_all_schedules', displayName: 'Duyệt lịch toàn công ty', resource: 'schedule', action: 'approve_all' },
-    { name: 'approve_dept_schedules', displayName: 'Duyệt lịch trong phòng', resource: 'schedule', action: 'approve_dept' },
+    { name: 'approve_dept_schedules_level2', displayName: 'Duyệt lịch trong phòng (cấp 2)', resource: 'schedule', action: 'approve_dept_level2' },
+    { name: 'approve_team_schedules_level1', displayName: 'Duyệt lịch trong team (cấp 1)', resource: 'schedule', action: 'approve_team_level1' },
+    { name: 'lock_all_schedules', displayName: 'Khóa lịch toàn công ty', resource: 'schedule', action: 'lock_all' },
     { name: 'create_schedule', displayName: 'Tạo lịch làm việc', resource: 'schedule', action: 'create' },
     { name: 'view_own_schedule', displayName: 'Xem lịch cá nhân', resource: 'schedule', action: 'read_own' },
     
@@ -127,10 +131,14 @@ async function main() {
     // Attendance permissions
     { name: 'view_all_attendance', displayName: 'Xem chấm công toàn công ty', resource: 'attendance', action: 'read_all' },
     { name: 'view_dept_attendance', displayName: 'Xem chấm công trong phòng', resource: 'attendance', action: 'read_dept' },
+    { name: 'view_team_attendance', displayName: 'Xem chấm công trong team', resource: 'attendance', action: 'read_team' },
     { name: 'check_in_out', displayName: 'Chấm công', resource: 'attendance', action: 'checkin' },
     
     // Department permissions
     { name: 'manage_departments', displayName: 'Quản lý phòng ban', resource: 'department', action: 'manage' },
+    
+    // Team permissions
+    { name: 'manage_teams', displayName: 'Quản lý team', resource: 'team', action: 'manage' },
   ];
 
   for (const permission of permissions) {
@@ -150,7 +158,7 @@ async function main() {
   // Get roles
   const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
   const deptManagerRole = await prisma.role.findUnique({ where: { name: 'DEPT_MANAGER' } });
-  const supervisorRole = await prisma.role.findUnique({ where: { name: 'SUPERVISOR' } });
+  const teamLeadRole = await prisma.role.findUnique({ where: { name: 'TEAM_LEAD' } });
   const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
 
   // MANAGER permissions (all permissions)
@@ -177,16 +185,21 @@ async function main() {
     where: {
       name: {
         in: [
+          'manage_departments', // Add department management for dept managers
           'manage_dept_employees',
           'view_dept_employees',
+          'view_team_members',
           'view_own_profile',
-          'approve_dept_schedules',
+          'approve_dept_schedules_level2',
+          'approve_team_schedules_level1',
           'create_schedule',
           'view_own_schedule',
           'approve_dept_leaves',
           'create_leave_request',
           'view_dept_attendance',
+          'view_team_attendance',
           'check_in_out',
+          'manage_teams',
         ],
       },
     },
@@ -208,37 +221,41 @@ async function main() {
   }
   console.log(`✅ Assigned ${deptManagerPermissions.length} permissions to DEPT_MANAGER`);
 
-  // SUPERVISOR permissions
-  const supervisorPermissions = await prisma.permission.findMany({
+  // TEAM_LEAD permissions
+  const teamLeadPermissions = await prisma.permission.findMany({
     where: {
       name: {
         in: [
-          'view_dept_employees',
+          'manage_team_members',
+          'view_team_members',
           'view_own_profile',
+          'approve_team_schedules_level1',
           'create_schedule',
           'view_own_schedule',
+          'approve_dept_leaves',
           'create_leave_request',
+          'view_team_attendance',
           'check_in_out',
         ],
       },
     },
   });
-  for (const permission of supervisorPermissions) {
+  for (const permission of teamLeadPermissions) {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
-          roleId: supervisorRole!.id,
+          roleId: teamLeadRole!.id,
           permissionId: permission.id,
         },
       },
       update: {},
       create: {
-        roleId: supervisorRole!.id,
+        roleId: teamLeadRole!.id,
         permissionId: permission.id,
       },
     });
   }
-  console.log(`✅ Assigned ${supervisorPermissions.length} permissions to SUPERVISOR`);
+  console.log(`✅ Assigned ${teamLeadPermissions.length} permissions to TEAM_LEAD`);
 
   // STAFF permissions
   const staffPermissions = await prisma.permission.findMany({
@@ -357,16 +374,16 @@ async function main() {
   });
   console.log('✅ Created user: tech.manager@company.com (password: 123456)');
 
-  // Create Supervisors
-  const salesSupervisor = await prisma.user.upsert({
-    where: { email: 'sales.supervisor@company.com' },
+  // Create Team Leads
+  const salesTeamLead = await prisma.user.upsert({
+    where: { email: 'sales.teamlead@company.com' },
     update: {},
     create: {
-      email: 'sales.supervisor@company.com',
+      email: 'sales.teamlead@company.com',
       password: hashedPassword,
-      fullName: 'Lê Văn Giám Sát',
+      fullName: 'Lê Văn Trưởng Nhóm',
       phone: '0905234567',
-      roleId: supervisorRole!.id,
+      roleId: teamLeadRole!.id,
       departmentId: salesDept!.id,
       managerId: salesManagerUser.id,
       employmentType: 'FULL_TIME',
@@ -374,17 +391,17 @@ async function main() {
       isActive: true,
     },
   });
-  console.log('✅ Created user: sales.supervisor@company.com (password: 123456)');
+  console.log('✅ Created user: sales.teamlead@company.com (password: 123456)');
 
-  const techSupervisor = await prisma.user.upsert({
-    where: { email: 'tech.supervisor@company.com' },
+  const techTeamLead = await prisma.user.upsert({
+    where: { email: 'tech.teamlead@company.com' },
     update: {},
     create: {
-      email: 'tech.supervisor@company.com',
+      email: 'tech.teamlead@company.com',
       password: hashedPassword,
-      fullName: 'Hoàng Thị Giám Sát',
+      fullName: 'Hoàng Thị Trưởng Nhóm',
       phone: '0906234567',
-      roleId: supervisorRole!.id,
+      roleId: teamLeadRole!.id,
       departmentId: techDept!.id,
       managerId: techManagerUser.id,
       employmentType: 'FULL_TIME',
@@ -392,7 +409,7 @@ async function main() {
       isActive: true,
     },
   });
-  console.log('✅ Created user: tech.supervisor@company.com (password: 123456)');
+  console.log('✅ Created user: tech.teamlead@company.com (password: 123456)');
 
   // Create Staff
   await prisma.user.upsert({
@@ -405,7 +422,7 @@ async function main() {
       phone: '0903234567',
       roleId: staffRole!.id,
       departmentId: techDept!.id,
-      managerId: techSupervisor.id,
+      managerId: techTeamLead.id,
       employmentType: 'FULL_TIME',
       fixedDayOff: 'SUNDAY',
       isActive: true,

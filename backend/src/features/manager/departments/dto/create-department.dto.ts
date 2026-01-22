@@ -1,41 +1,13 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsString,
-  IsOptional,
-  IsUUID,
-  MaxLength,
-} from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class CreateDepartmentDto {
-  @ApiProperty({ example: 'Phòng Kinh doanh', description: 'Tên phòng ban' })
-  @IsString({ message: 'Tên phòng ban phải là chuỗi' })
-  @IsNotEmpty({ message: 'Tên phòng ban không được để trống' })
-  @MaxLength(100, { message: 'Tên phòng ban không được quá 100 ký tự' })
+  @IsString()
   name: string;
 
-  @ApiProperty({
-    example: 'SALES',
-    description: 'Mã phòng ban (viết hoa, không dấu)',
-  })
-  @IsString({ message: 'Mã phòng ban phải là chuỗi' })
-  @IsNotEmpty({ message: 'Mã phòng ban không được để trống' })
-  @MaxLength(20, { message: 'Mã phòng ban không được quá 20 ký tự' })
+  @IsString()
   code: string;
 
-  @ApiPropertyOptional({
-    example: 'Phòng chuyên về kinh doanh và bán hàng',
-    description: 'Mô tả phòng ban',
-  })
-  @IsString({ message: 'Mô tả phải là chuỗi' })
   @IsOptional()
-  @MaxLength(500, { message: 'Mô tả không được quá 500 ký tự' })
+  @IsString()
   description?: string;
-
-  @ApiPropertyOptional({ example: 'uuid-manager', description: 'ID trưởng phòng' })
-  @IsUUID('4', { message: 'ID trưởng phòng phải là UUID hợp lệ' })
-  @IsOptional()
-  managerId?: string;
 }
-
-

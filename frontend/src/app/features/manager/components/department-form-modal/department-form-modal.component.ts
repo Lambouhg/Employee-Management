@@ -2,10 +2,8 @@ import { Component, inject, Input, Output, EventEmitter, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
-import { EmployeeService } from '@core/services/employee.service';
-import { Department, DepartmentDetail } from '@core/models/department.model';
+import { DepartmentDetail } from '@core/models/department.model';
 import { LucideAngularModule, X, Info } from 'lucide-angular';
-import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-department-form-modal',
@@ -20,10 +18,8 @@ export class DepartmentFormModalComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private departmentService = inject(DepartmentService);
-  private employeeService = inject(EmployeeService);
 
   form!: FormGroup;
-  managers: { id: string; fullName: string }[] = [];
   isEdit = false;
   isSubmitting = false;
   errorMessage: string | null = null;
@@ -41,34 +37,19 @@ export class DepartmentFormModalComponent implements OnInit {
     this.form = this.fb.group({
       name: ['', Validators.required],
       code: ['', [Validators.required, Validators.pattern(/^[A-Z0-9_-]+$/)]],
-      description: [''],
-      managerId: ['']
+      description: ['']
     });
   }
 
   loadData() {
-    const managers$ = this.employeeService.getManagers();
-
     if (this.isEdit && this.departmentId) {
-      const detail$ = this.departmentService.getDepartmentDetail(this.departmentId);
-      forkJoin({ managers: managers$, detail: detail$ }).subscribe({
-        next: ({ managers, detail }) => {
-          this.managers = managers as any;
+      this.departmentService.getDepartmentDetail(this.departmentId).subscribe({
+        next: (detail) => {
           this.patchForm(detail);
         },
         error: (err) => {
           console.error('Error loading department form data', err);
           this.errorMessage = 'Không thể tải dữ liệu phòng ban';
-        }
-      });
-    } else {
-      managers$.subscribe({
-        next: (managers) => {
-          this.managers = managers as any;
-        },
-        error: (err) => {
-          console.error('Error loading form lists', err);
-          this.errorMessage = 'Không thể tải dữ liệu form';
         }
       });
     }
@@ -78,8 +59,7 @@ export class DepartmentFormModalComponent implements OnInit {
     this.form.patchValue({
       name: detail.name,
       code: detail.code,
-      description: detail.description || '',
-      managerId: detail.manager?.id || ''
+      description: detail.description || ''
     });
   }
 
@@ -90,40 +70,58 @@ export class DepartmentFormModalComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-    const payload = { ...this.form.value };
-    
-    // Normalize department code to uppercase if provided
-    if (payload.code) {
-      payload.code = (payload.code as string).toUpperCase();
-    }
 
-    // Clean empty string fields - convert to null or remove
-    // Handle managerId differently for create vs edit mode
-    if (payload.managerId === '' || payload.managerId === null) {
-      if (this.isEdit) {
-        // In edit mode: send null explicitly to tell backend to remove manager
-        payload.managerId = null;
-      } else {
-        // In create mode: remove field (optional, backend will handle)
-        delete payload.managerId;
-      }
-    }
-    if (payload.description === '' || payload.description === null) {
-      delete payload.description; // Remove empty description
-    }
+    const formValue = this.form.value;
+    
+    // Prepare payload - only name, code, description (NO managerId)
+    const payload = {
+      name: formValue.name,
+      code: formValue.code?.toUpperCase(),
+      description: formValue.description || undefined
+    };
 
     if (!this.isEdit) {
+      // Create mode
       this.departmentService.create(payload).subscribe({
-        next: () => { this.isSubmitting = false; this.saved.emit(); this.onClose(); },
-        error: (err) => { this.isSubmitting = false; this.errorMessage = err.error?.message || 'Lỗi tạo phòng ban'; }
+        next: () => { 
+          this.isSubmitting = false; 
+          this.saved.emit(); 
+          this.onClose(); 
+        },
+        error: (err) => {
+          console.error('Create error:', err);
+          console.error('Error response:', err.error);
+          this.isSubmitting = false;
+          
+          // Handle different error formats
+          let errorMsg = 'Lỗi tạo phòng ban';
+          if (err.error) {
+            if (Array.isArray(err.error.message)) {
+              errorMsg = err.error.message.join(', ');
+            } else if (typeof err.error.message === 'string') {
+              errorMsg = err.error.message;
+            } else if (err.error.error) {
+              errorMsg = err.error.error;
+            }
+          }
+          this.errorMessage = errorMsg;
+        }
       });
-      return;
+    } else {
+      // Edit mode - only update metadata, NOT manager
+      this.departmentService.update(this.departmentId!, payload).subscribe({
+        next: () => { 
+          this.isSubmitting = false; 
+          this.saved.emit(); 
+          this.onClose(); 
+        },
+        error: (err) => {
+          console.error('Update error:', err);
+          this.isSubmitting = false;
+          this.errorMessage = err.error?.message || 'Lỗi cập nhật phòng ban';
+        }
+      });
     }
-
-    this.departmentService.update(this.departmentId!, payload).subscribe({
-      next: () => { this.isSubmitting = false; this.saved.emit(); this.onClose(); },
-      error: (err) => { this.isSubmitting = false; this.errorMessage = err.error?.message || 'Lỗi cập nhật phòng ban'; }
-    });
   }
 
   onClose() { this.closed.emit(); }

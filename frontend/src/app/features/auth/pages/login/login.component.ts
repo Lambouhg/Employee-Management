@@ -51,7 +51,13 @@ export class LoginComponent {
       error: (error) => {
         console.error('Login error', error);
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Email hoặc mật khẩu không đúng';
+        // Handle array of messages or single message
+        const errorMsg = error.error?.message;
+        if (Array.isArray(errorMsg)) {
+          this.errorMessage = errorMsg.join(', ') || 'Email hoặc mật khẩu không đúng';
+        } else {
+          this.errorMessage = errorMsg || 'Email hoặc mật khẩu không đúng';
+        }
       }
     });
   }

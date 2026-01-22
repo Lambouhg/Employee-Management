@@ -116,10 +116,17 @@ export class EmployeeService {
   }
 
   /**
-   * Lấy danh sách quản lý
+   * Lấy danh sách quản lý (tất cả managers - TEAM_LEAD và above)
    */
   getManagers(): Observable<Manager[]> {
     return this.http.get<Manager[]>(`${this.apiUrl}/managers`);
+  }
+
+  /**
+   * Lấy danh sách quản lý phòng ban (chỉ DEPT_MANAGER)
+   */
+  getDepartmentManagers(): Observable<Manager[]> {
+    return this.http.get<Manager[]>(`${this.apiUrl}/managers/department`);
   }
 
   /**

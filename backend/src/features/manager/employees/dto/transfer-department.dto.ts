@@ -1,7 +1,7 @@
 import { IsOptional, IsUUID } from 'class-validator';
 
-export class AssignDepartmentManagerDto {
+export class TransferDepartmentDto {
   @IsOptional()
   @IsUUID()
-  managerId?: string | null;
+  departmentId?: string | null;
 }

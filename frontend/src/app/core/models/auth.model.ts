@@ -3,13 +3,15 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-  phone?: string;
+  phone?: string | null;
   role: Role;
-  department?: Department;
+  department?: Department | null;
   employmentType: 'FULL_TIME' | 'PART_TIME';
+  fixedDayOff?: string | null;
   isActive?: boolean;
+  createdAt?: string | Date;
   permissions?: string[];
-  manager?: UserBasic;
+  manager?: UserBasic | null;
   subordinates?: UserBasic[];
 }
 
@@ -46,7 +48,29 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   accessToken: string;
+  refreshToken?: string;
   user: User;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+}
+
+export interface LogoutResponse {
+  message: string;
 }
 
 export interface AuthState {

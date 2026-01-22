@@ -13,6 +13,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/pages/login/login.component').then(m => m.LoginComponent)
   },
   {
+    path: 'change-password',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/auth/pages/change-password/change-password.component').then(m => m.ChangePasswordComponent)
+  },
+  {
     path: 'manager',
     canActivate: [authGuard, roleGuard],
     data: { roles: ['MANAGER'] },

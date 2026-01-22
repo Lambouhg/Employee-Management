@@ -106,19 +106,15 @@ export class EmployeeFormModalComponent implements OnInit {
 
     const formValue = { ...this.employeeForm.value };
     
-    // Clean up optional fields
+    // Clean up optional fields: convert empty strings to null or remove
+    const optionalUUIDFields = ['departmentId'];
     const optionalStringFields = ['phone', 'fixedDayOff'];
     
-    // Handle departmentId differently for create vs edit mode
-    if (formValue.departmentId === '' || formValue.departmentId === null) {
-      if (this.isEditMode) {
-        // In edit mode: send null explicitly to tell backend to remove department
-        formValue.departmentId = null;
-      } else {
-        // In create mode: remove field (optional, backend will handle)
-        delete formValue.departmentId;
+    optionalUUIDFields.forEach(field => {
+      if (formValue[field] === '' || formValue[field] === null) {
+        delete formValue[field]; // Remove entirely when empty - backend will handle as optional
       }
-    }
+    });
     
     optionalStringFields.forEach(field => {
       if (formValue[field] === '') {

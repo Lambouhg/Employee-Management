@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
-import { EmployeesController } from './controllers/employees.controller';
-import { EmployeeActionsController } from './controllers/employee-actions.controller';
-import { EmployeesService } from './services/employees.service';
-import { EmployeeActionsService } from './services/employee-actions.service';
+import { ManagerEmployeesController } from './manager-employees.controller';
+import { ManagerEmployeesService } from './manager-employees.service';
 
 @Module({
-  controllers: [EmployeesController, EmployeeActionsController],
-  providers: [EmployeesService, EmployeeActionsService],
-  exports: [EmployeesService, EmployeeActionsService],
+  controllers: [ManagerEmployeesController],
+  providers: [ManagerEmployeesService],
+  exports: [ManagerEmployeesService],
 })
 export class ManagerEmployeesModule {}
 

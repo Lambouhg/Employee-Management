@@ -2,45 +2,76 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
+import { EmployeeService } from '@core/services/employee.service';
 import { DepartmentFormModalComponent } from '../../components/department-form-modal/department-form-modal.component';
-import { Department } from '@core/models/department.model';
-import { 
-  LucideAngularModule, 
+import { AssignManagerModalComponent } from '../../components/assign-manager-modal/assign-manager-modal.component';
+import { ManageEmployeesModalComponent } from '../../components/manage-employees-modal/manage-employees-modal.component';
+import { Info } from 'lucide-angular';
+import { Department, DepartmentEmployee } from '@core/models/department.model';
+import { Employee } from '@core/models/employee.model';
+import {
+  LucideAngularModule,
   Building2,
   Plus,
   Edit,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  UserPlus,
+  UserMinus,
+  UserCog,
+  MoreVertical
 } from 'lucide-angular';
 
 @Component({
   selector: 'app-department-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DepartmentFormModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideAngularModule,
+    DepartmentFormModalComponent,
+    AssignManagerModalComponent,
+    ManageEmployeesModalComponent
+  ],
   templateUrl:'./department-list.component.html',
 })
 export class DepartmentListComponent implements OnInit {
   public departments: Department[] = [];
+  public employees: Employee[] = [];
   public isLoading = true;
   public readonly Building2 = Building2;
   public readonly Plus = Plus;
   public readonly Edit = Edit;
   public readonly Trash2 = Trash2;
   public readonly ChevronRight = ChevronRight;
+  public readonly UserPlus = UserPlus;
+  public readonly UserMinus = UserMinus;
+  public readonly UserCog = UserCog;
+  public readonly MoreVertical = MoreVertical;
 
   constructor(
     public departmentService: DepartmentService,
+    private employeeService: EmployeeService,
     private cdr: ChangeDetectorRef
   ) {}
 
-  // Modal state
+  // Modal states
   showDepartmentForm = false;
+  showAssignManager = false;
+  showManageEmployees = false;
   editingDepartmentId?: string | null;
+  selectedDepartmentId?: string;
+  selectedDepartment?: Department;
+
+  // Dropdown state
+  openDropdownId: string | null = null;
+
   // Expanded state for department cards
   private expandedIds = new Set<string>();
 
   ngOnInit(): void {
     this.loadDepartments();
+    this.loadEmployees();
   }
 
   toggleExpanded(id: string): void {
@@ -68,6 +99,17 @@ export class DepartmentListComponent implements OnInit {
     });
   }
 
+  loadEmployees(): void {
+    this.employeeService.getAll().subscribe({
+      next: (response) => {
+        this.employees = response.data;
+      },
+      error: (err) => {
+        console.error('Error loading employees:', err);
+      }
+    });
+  }
+
   openDepartmentForm(deptId?: string): void {
     this.editingDepartmentId = deptId;
     this.showDepartmentForm = true;
@@ -83,12 +125,63 @@ export class DepartmentListComponent implements OnInit {
     this.loadDepartments();
   }
 
+  onManagerAssigned(): void {
+    this.closeAssignManager();
+    this.loadDepartments();
+  }
+
+  onEmployeesManaged(): void {
+    this.closeManageEmployees();
+    this.loadDepartments();
+  }
+
   deleteDepartment(id: string): void {
     if (!confirm('Bạn có chắc chắn muốn xóa phòng ban này?')) return;
     this.departmentService.remove(id).subscribe({
       next: () => this.loadDepartments(),
       error: (err) => alert(err.error?.message || 'Không thể xóa phòng ban')
     });
+  }
+
+  // Dropdown methods
+  toggleDropdown(deptId: string, event: Event): void {
+    event.stopPropagation();
+    this.openDropdownId = this.openDropdownId === deptId ? null : deptId;
+  }
+
+  isDropdownOpen(deptId: string): boolean {
+    return this.openDropdownId === deptId;
+  }
+
+  closeDropdown(): void {
+    this.openDropdownId = null;
+  }
+
+  // Modal methods
+  openAssignManager(dept: Department): void {
+    this.selectedDepartmentId = dept.id;
+    this.selectedDepartment = dept;
+    this.showAssignManager = true;
+    this.closeDropdown();
+  }
+
+  closeAssignManager(): void {
+    this.showAssignManager = false;
+    this.selectedDepartmentId = undefined;
+    this.selectedDepartment = undefined;
+  }
+
+  openManageEmployees(dept: Department): void {
+    this.selectedDepartmentId = dept.id;
+    this.selectedDepartment = dept;
+    this.showManageEmployees = true;
+    this.closeDropdown();
+  }
+
+  closeManageEmployees(): void {
+    this.showManageEmployees = false;
+    this.selectedDepartmentId = undefined;
+    this.selectedDepartment = undefined;
   }
 
   getInitials(name: string): string {
