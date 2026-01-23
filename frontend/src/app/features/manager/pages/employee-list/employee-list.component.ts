@@ -1,9 +1,10 @@
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { AuthService } from '@core/services/auth.service';
-import { EmployeeService } from '@core/services/employee.service';
+import { ManagerService } from '@app/core/services/manager.service';
 import { DepartmentService } from '@core/services/department.service';
 import { Employee, EmployeeQueryParams } from '@core/models/employee.model';
 import { Role } from '@core/models/role.model';
@@ -35,9 +36,10 @@ import { finalize } from 'rxjs/operators';
 })
 export class EmployeeListComponent implements OnInit {
   private authService = inject(AuthService);
-  private employeeService = inject(EmployeeService);
+  private employeeService = inject(ManagerService);
   private departmentService = inject(DepartmentService);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
   
   currentUser: User | null = null;
   searchText = '';
@@ -351,6 +353,7 @@ export class EmployeeListComponent implements OnInit {
   }
 
   handleTableAction(event: EmployeeActionEvent): void {
+    console.log('Table action received:', event);
     switch (event.type) {
       case 'toggle-status':
         if (event.employee) this.toggleEmployeeStatus(event.employee);
@@ -364,6 +367,16 @@ export class EmployeeListComponent implements OnInit {
       case 'delete':
         this.deleteEmployee(event.employeeId);
         break;
+      case 'view':
+        console.log('View action triggered for employee ID:', event.employeeId);
+        this.viewEmployeeDetail(event.employeeId);
+        break;
     }
+  }
+
+  viewEmployeeDetail(employeeId: string): void {
+    console.log('Navigating to employee detail:', employeeId);
+    console.log('Router:', this.router);
+    this.router.navigate(['/manager/employees', employeeId]);
   }
 }

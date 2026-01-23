@@ -64,23 +64,17 @@ async function main() {
   // ============================================
   console.log('\n📋 Seeding roles...');
   
-  const roles = [
+  const roles: any[] = [
     {
       name: 'MANAGER',
       displayName: 'Quản lý',
       description: 'Quản lý cấp cao / Chủ hệ thống - Quản lý toàn bộ nhân sự, phòng ban, team. Có quyền khóa lịch tuần (LOCKED)',
-      level: 4,
+      level: 3,
     },
     {
       name: 'DEPT_MANAGER',
       displayName: 'Trưởng phòng',
       description: 'Quản lý hiệu suất & nguồn lực của phòng ban. Duyệt lịch tuần cấp 2, duyệt nghỉ phép',
-      level: 3,
-    },
-    {
-      name: 'TEAM_LEAD',
-      displayName: 'Trưởng nhóm',
-      description: 'Quản lý vi mô nhân viên trong Team. Duyệt lịch tuần cấp 1, duyệt nghỉ đột xuất',
       level: 2,
     },
     {
@@ -138,7 +132,7 @@ async function main() {
     { name: 'manage_departments', displayName: 'Quản lý phòng ban', resource: 'department', action: 'manage' },
     
     // Team permissions
-    { name: 'manage_teams', displayName: 'Quản lý team', resource: 'team', action: 'manage' },
+    // Team-related permissions removed (system no longer uses teams)
   ];
 
   for (const permission of permissions) {
@@ -158,7 +152,6 @@ async function main() {
   // Get roles
   const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
   const deptManagerRole = await prisma.role.findUnique({ where: { name: 'DEPT_MANAGER' } });
-  const teamLeadRole = await prisma.role.findUnique({ where: { name: 'TEAM_LEAD' } });
   const staffRole = await prisma.role.findUnique({ where: { name: 'STAFF' } });
 
   // MANAGER permissions (all permissions)
@@ -188,18 +181,17 @@ async function main() {
           'manage_departments', // Add department management for dept managers
           'manage_dept_employees',
           'view_dept_employees',
-          'view_team_members',
+          // team views removed
           'view_own_profile',
           'approve_dept_schedules_level2',
-          'approve_team_schedules_level1',
+          // team-level approvals removed
           'create_schedule',
           'view_own_schedule',
           'approve_dept_leaves',
           'create_leave_request',
           'view_dept_attendance',
-          'view_team_attendance',
+          // team attendance removed
           'check_in_out',
-          'manage_teams',
         ],
       },
     },
@@ -221,41 +213,7 @@ async function main() {
   }
   console.log(`✅ Assigned ${deptManagerPermissions.length} permissions to DEPT_MANAGER`);
 
-  // TEAM_LEAD permissions
-  const teamLeadPermissions = await prisma.permission.findMany({
-    where: {
-      name: {
-        in: [
-          'manage_team_members',
-          'view_team_members',
-          'view_own_profile',
-          'approve_team_schedules_level1',
-          'create_schedule',
-          'view_own_schedule',
-          'approve_dept_leaves',
-          'create_leave_request',
-          'view_team_attendance',
-          'check_in_out',
-        ],
-      },
-    },
-  });
-  for (const permission of teamLeadPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: teamLeadRole!.id,
-          permissionId: permission.id,
-        },
-      },
-      update: {},
-      create: {
-        roleId: teamLeadRole!.id,
-        permissionId: permission.id,
-      },
-    });
-  }
-  console.log(`✅ Assigned ${teamLeadPermissions.length} permissions to TEAM_LEAD`);
+  // No TEAM_LEAD role in this schema
 
   // STAFF permissions
   const staffPermissions = await prisma.permission.findMany({
@@ -373,45 +331,7 @@ async function main() {
     },
   });
   console.log('✅ Created user: tech.manager@company.com (password: 123456)');
-
-  // Create Team Leads
-  const salesTeamLead = await prisma.user.upsert({
-    where: { email: 'sales.teamlead@company.com' },
-    update: {},
-    create: {
-      email: 'sales.teamlead@company.com',
-      password: hashedPassword,
-      fullName: 'Lê Văn Trưởng Nhóm',
-      phone: '0905234567',
-      roleId: teamLeadRole!.id,
-      departmentId: salesDept!.id,
-      managerId: salesManagerUser.id,
-      employmentType: 'FULL_TIME',
-      fixedDayOff: 'SUNDAY',
-      isActive: true,
-    },
-  });
-  console.log('✅ Created user: sales.teamlead@company.com (password: 123456)');
-
-  const techTeamLead = await prisma.user.upsert({
-    where: { email: 'tech.teamlead@company.com' },
-    update: {},
-    create: {
-      email: 'tech.teamlead@company.com',
-      password: hashedPassword,
-      fullName: 'Hoàng Thị Trưởng Nhóm',
-      phone: '0906234567',
-      roleId: teamLeadRole!.id,
-      departmentId: techDept!.id,
-      managerId: techManagerUser.id,
-      employmentType: 'FULL_TIME',
-      fixedDayOff: 'SUNDAY',
-      isActive: true,
-    },
-  });
-  console.log('✅ Created user: tech.teamlead@company.com (password: 123456)');
-
-  // Create Staff
+  // Create Staff (reporting to dept manager)
   await prisma.user.upsert({
     where: { email: 'staff@company.com' },
     update: {},
@@ -422,7 +342,7 @@ async function main() {
       phone: '0903234567',
       roleId: staffRole!.id,
       departmentId: techDept!.id,
-      managerId: techTeamLead.id,
+      managerId: techManagerUser.id,
       employmentType: 'FULL_TIME',
       fixedDayOff: 'SUNDAY',
       isActive: true,

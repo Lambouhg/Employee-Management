@@ -4,6 +4,10 @@ import { ManagerRolesModule } from './roles/manager-roles.module';
 import { ManagerDepartmentsModule } from './departments/manager-departments.module';
 
 @Module({
-  imports: [ManagerEmployeesModule, ManagerRolesModule, ManagerDepartmentsModule],
+  imports: [
+    ManagerEmployeesModule,
+    ManagerRolesModule,
+    ManagerDepartmentsModule,
+  ],
 })
 export class ManagerModule {}

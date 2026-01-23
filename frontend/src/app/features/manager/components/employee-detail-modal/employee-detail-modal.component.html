@@ -1,0 +1,65 @@
+
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg w-11/12 max-w-2xl p-6">
+        <div class="flex items-start justify-between mb-4">
+          <h3 class="text-lg font-semibold">Employee Details</h3>
+          <button (click)="close()" class="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+
+        <div *ngIf="employee; else noData">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500">Full name</p>
+              <p class="font-medium">{{ employee.fullName }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Email</p>
+              <p class="font-medium">{{ employee.email }}</p>
+            </div>
+
+            <div>
+              <p class="text-xs text-gray-500">Phone</p>
+              <p class="font-medium">{{ employee.phone || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Role</p>
+              <p class="font-medium">{{ employee.role?.displayName || employee.role?.name }}</p>
+            </div>
+
+            <div>
+              <p class="text-xs text-gray-500">Department</p>
+              <p class="font-medium">{{ employee.department?.name || '-' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Manager</p>
+              <p class="font-medium">{{ employee.manager?.fullName || '-' }}</p>
+            </div>
+
+            <div>
+              <p class="text-xs text-gray-500">Employment Type</p>
+              <p class="font-medium">{{ employee.employmentType }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Status</p>
+              <p class="font-medium">{{ employee.isActive ? 'Active' : 'Inactive' }}</p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-xs text-gray-500">Subordinates ({{ employee.subordinatesCount }})</p>
+            <ul class="mt-2 space-y-1">
+              <li *ngFor="let s of employee.subordinates">{{ s.fullName }} — {{ s.role?.displayName || s.role?.name }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <ng-template #noData>
+          <p class="text-gray-500">No employee data available.</p>
+        </ng-template>
+
+        <div class="mt-6 text-right">
+          <button (click)="close()" class="px-4 py-2 bg-gray-100 rounded">Close</button>
+        </div>
+      </div>
+    </div>
+   

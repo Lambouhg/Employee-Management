@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
-import { EmployeeService } from '@core/services/employee.service';
+import { ManagerService } from '@app/core/services/manager.service';
 import { DepartmentFormModalComponent } from '../../components/department-form-modal/department-form-modal.component';
 import { AssignManagerModalComponent } from '../../components/assign-manager-modal/assign-manager-modal.component';
 import { ManageEmployeesModalComponent } from '../../components/manage-employees-modal/manage-employees-modal.component';
@@ -50,7 +50,7 @@ export class DepartmentListComponent implements OnInit {
 
   constructor(
     public departmentService: DepartmentService,
-    private employeeService: EmployeeService,
+    private employeeService: ManagerService,
     private cdr: ChangeDetectorRef
   ) {}
 

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, Output, EventEmitter, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { EmployeeService } from '@core/services/employee.service';
+import { ManagerService } from '@app/core/services/manager.service';
 import { DepartmentService } from '@core/services/department.service';
 import { forkJoin } from 'rxjs';
 import { CreateEmployeeDto, UpdateEmployeeDto } from '@core/models/employee.model';
@@ -21,7 +21,7 @@ export class EmployeeFormModalComponent implements OnInit {
   @Output() saved = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
-  private employeeService = inject(EmployeeService);
+  private managerService = inject(ManagerService);
   private departmentService = inject(DepartmentService);
 
   employeeForm!: FormGroup;
@@ -58,7 +58,7 @@ export class EmployeeFormModalComponent implements OnInit {
 
   loadFormData(): void {
     // Load roles and departments in parallel, then (if edit) load employee and patch
-    const roles$ = this.employeeService.getRoles();
+    const roles$ = this.managerService.getRoles();
     const depts$ = this.departmentService.getDepartments(true);
 
     forkJoin({ roles: roles$, depts: depts$ }).subscribe({
@@ -67,7 +67,7 @@ export class EmployeeFormModalComponent implements OnInit {
         this.departments = depts;
 
         if (this.isEditMode && this.employeeId) {
-          this.employeeService.getById(this.employeeId).subscribe({
+          this.managerService.getById(this.employeeId).subscribe({
             next: (employee) => {
               this.originalIsActive = employee.isActive;
               this.employeeForm.patchValue({
@@ -106,15 +106,13 @@ export class EmployeeFormModalComponent implements OnInit {
 
     const formValue = { ...this.employeeForm.value };
     
-    // Clean up optional fields: convert empty strings to null or remove
-    const optionalUUIDFields = ['departmentId'];
+    // Clean up optional fields: convert empty strings to null
     const optionalStringFields = ['phone', 'fixedDayOff'];
     
-    optionalUUIDFields.forEach(field => {
-      if (formValue[field] === '' || formValue[field] === null) {
-        delete formValue[field]; // Remove entirely when empty - backend will handle as optional
-      }
-    });
+    // For departmentId: send null when empty to explicitly remove department
+    if (formValue.departmentId === '' || formValue.departmentId === null) {
+      formValue.departmentId = null;
+    }
     
     optionalStringFields.forEach(field => {
       if (formValue[field] === '') {
@@ -125,7 +123,7 @@ export class EmployeeFormModalComponent implements OnInit {
     // If creating, remove isActive and ensure password is present
     if (!this.isEditMode) {
       delete formValue.isActive;
-      this.employeeService.create(formValue as CreateEmployeeDto).subscribe({
+      this.managerService.create(formValue as CreateEmployeeDto).subscribe({
         next: () => {
           this.isSubmitting = false;
           this.saved.emit();
@@ -149,13 +147,13 @@ export class EmployeeFormModalComponent implements OnInit {
     const desiredIsActive = formValue.isActive;
     delete formValue.isActive;
 
-    this.employeeService.update(this.employeeId!, formValue as UpdateEmployeeDto).subscribe({
+    this.managerService.update(this.employeeId!, formValue as UpdateEmployeeDto).subscribe({
       next: () => {
         // If active state changed, call the specific endpoint
         if (this.originalIsActive !== undefined && this.originalIsActive !== desiredIsActive) {
           const action$ = desiredIsActive
-            ? this.employeeService.activate(this.employeeId!)
-            : this.employeeService.deactivate(this.employeeId!);
+            ? this.managerService.activate(this.employeeId!)
+            : this.managerService.deactivate(this.employeeId!);
 
           action$.subscribe({
             next: () => {

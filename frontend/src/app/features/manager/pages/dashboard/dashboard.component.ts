@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
-import { EmployeeService } from '@core/services/employee.service';
+import { ManagerService } from '@app/core/services/manager.service';
 
 import { User } from '@core/models/auth.model';
 import { 
@@ -29,7 +29,7 @@ import {
 })
 export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
-  private employeeService = inject(EmployeeService);
+  private managerService = inject(ManagerService);
  
   private router = inject(Router);
 
@@ -74,13 +74,13 @@ export class DashboardComponent implements OnInit {
     this.isLoading = false;
 
     // Load employee statistics
-    this.employeeService.getAll({ page: 1, limit: 1 }).subscribe({
+    this.managerService.getAll({ page: 1, limit: 1 }).subscribe({
       next: (response) => {
         this.statistics.totalEmployees = response.meta.total;
       }
     });
 
-    this.employeeService.getAll({ page: 1, limit: 1, isActive: true }).subscribe({
+    this.managerService.getAll({ page: 1, limit: 1, isActive: true }).subscribe({
       next: (response) => {
         this.statistics.activeEmployees = response.meta.total;
         this.isLoading = false;

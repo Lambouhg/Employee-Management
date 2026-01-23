@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma, EmploymentType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../../common/database/prisma.service';
@@ -10,7 +14,7 @@ import { TransferDepartmentDto } from './dto/transfer-department.dto';
 
 @Injectable()
 export class ManagerEmployeesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private employeeSelect = {
     id: true,
@@ -211,6 +215,11 @@ export class ManagerEmployeesService {
       managerId = department?.managerId ?? null;
     }
 
+    // Validate manager role (if any)
+    if (managerId) {
+      await this.ensureManagerIsAllowed(managerId);
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -220,7 +229,7 @@ export class ManagerEmployeesService {
         roleId: dto.roleId,
         departmentId: dto.departmentId ?? null,
         employmentType: dto.employmentType,
-        fixedDayOff: dto.fixedDayOff as any ?? null,
+        fixedDayOff: (dto.fixedDayOff as any) ?? null,
         managerId,
       },
       select: this.employeeSelect,
@@ -242,15 +251,23 @@ export class ManagerEmployeesService {
 
     // Handle department change - auto-assign manager from new department
     let newManagerId: string | null | undefined = undefined;
-    if (dto.departmentId !== undefined && dto.departmentId !== null && dto.departmentId !== '') {
-      const department = await this.prisma.department.findUnique({
-        where: { id: dto.departmentId },
-        select: { managerId: true },
-      });
-      newManagerId = department?.managerId ?? null;
-    } else if (dto.departmentId === null || dto.departmentId === '') {
-      // Remove department - also remove manager
-      newManagerId = null;
+    if (dto.departmentId !== undefined) {
+      if (dto.departmentId && dto.departmentId !== '') {
+        // Assign to new department - get department manager
+        const department = await this.prisma.department.findUnique({
+          where: { id: dto.departmentId },
+          select: { managerId: true },
+        });
+        newManagerId = department?.managerId ?? null;
+      } else {
+        // Remove department (null or empty string) - also remove manager
+        newManagerId = null;
+      }
+    }
+
+    // If a manager is being set as part of department change, validate role
+    if (newManagerId) {
+      await this.ensureManagerIsAllowed(newManagerId);
     }
 
     const data: Prisma.UserUpdateInput = {
@@ -259,11 +276,11 @@ export class ManagerEmployeesService {
       phone: dto.phone ?? undefined,
       role: dto.roleId ? { connect: { id: dto.roleId } } : undefined,
       department:
-        dto.departmentId !== undefined && dto.departmentId !== null && dto.departmentId !== ''
-          ? { connect: { id: dto.departmentId } }
-          : dto.departmentId === null || dto.departmentId === ''
-            ? { disconnect: true }
-            : undefined,
+        dto.departmentId !== undefined
+          ? dto.departmentId && dto.departmentId !== ''
+            ? { connect: { id: dto.departmentId } }
+            : { disconnect: true }
+          : undefined,
       manager:
         newManagerId !== undefined
           ? newManagerId
@@ -271,7 +288,7 @@ export class ManagerEmployeesService {
             : { disconnect: true }
           : undefined,
       employmentType: dto.employmentType,
-      fixedDayOff: dto.fixedDayOff as any ?? undefined,
+      fixedDayOff: (dto.fixedDayOff as any) ?? undefined,
       isActive: dto.isActive,
     };
 
@@ -350,6 +367,10 @@ export class ManagerEmployeesService {
       managerId = null;
     }
 
+    if (managerId) {
+      await this.ensureManagerIsAllowed(managerId);
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -363,15 +384,38 @@ export class ManagerEmployeesService {
   }
 
   async assignManager(userId: string, dto: AssignManagerDto) {
+    const managerId = dto.managerId ?? null;
+    if (managerId) {
+      await this.ensureManagerIsAllowed(managerId);
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        managerId: dto.managerId ?? null,
+        managerId,
       },
       select: this.employeeSelect,
     });
 
     return this.toEmployee(updated);
+  }
+
+  private async ensureManagerIsAllowed(managerId: string) {
+    const manager = await this.prisma.user.findUnique({
+      where: { id: managerId },
+      select: { id: true, role: { select: { name: true } } },
+    });
+
+    if (!manager) {
+      throw new NotFoundException('Không tìm thấy người quản lý');
+    }
+
+    const roleName = manager.role?.name;
+    if (!roleName || roleName === 'STAFF') {
+      throw new BadRequestException(
+        'Người được chỉ định làm quản lý phải có vai trò MANAGER hoặc DEPT_MANAGER',
+      );
+    }
   }
 
   async getSubordinates(managerId: string) {
@@ -401,14 +445,12 @@ export class ManagerEmployeesService {
   }
 
   async getManagers() {
-    // Get all managers (TEAM_LEAD and above) for general use
+    // Get all managers 
     const managers = await this.prisma.user.findMany({
       where: {
         isActive: true,
         role: {
-          level: {
-            gte: 2, // TEAM_LEAD and above
-          },
+          name: { in: ['MANAGER', 'DEPT_MANAGER'] },
         },
       },
       select: {

@@ -16,7 +16,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const secret = configService.get<string>('jwt.secret', 'default-secret');
+        const secret = configService.get<string>(
+          'jwt.secret',
+          'default-secret',
+        );
         const expiresIn = configService.get<string>('jwt.expiresIn', '7d');
         return {
           secret,

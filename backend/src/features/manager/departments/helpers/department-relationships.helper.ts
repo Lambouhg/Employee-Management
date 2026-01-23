@@ -10,7 +10,7 @@ export class DepartmentRelationshipsHelper {
   /**
    * Clean up all relationships when deleting a department
    * This ensures data integrity and prevents orphaned references
-   * 
+   *
    * Logic:
    * 1. Remove all employees from department (departmentId = null)
    * 2. Remove managerId from employees if their manager is the department manager
@@ -42,7 +42,7 @@ export class DepartmentRelationshipsHelper {
     //      (because when department is deleted, department manager relationship is invalid)
     for (const employee of employees) {
       const shouldRemoveManager = employee.managerId === department.managerId;
-      
+
       await prisma.user.update({
         where: { id: employee.id },
         data: {
@@ -98,7 +98,7 @@ export class DepartmentRelationshipsHelper {
   /**
    * When assigning employees to a department, automatically assign department manager
    * as their direct manager (if autoAssignManager is true)
-   * 
+   *
    * IMPORTANT: Only assign managerId to regular employees, NOT to DEPT_MANAGER
    * DEPT_MANAGER should not have a manager relationship
    */

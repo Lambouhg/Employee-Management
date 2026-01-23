@@ -1,10 +1,19 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/database/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtPayload, LoginResponse, RefreshTokenResponse, UserProfile } from './interfaces/auth.interface';
+import {
+  JwtPayload,
+  LoginResponse,
+  RefreshTokenResponse,
+  UserProfile,
+} from './interfaces/auth.interface';
 
 @Injectable()
 export class AuthService {
@@ -17,7 +26,7 @@ export class AuthService {
     const { email, password } = loginDto;
 
     // 1. Tìm user theo email
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { email },
       include: {
         role: {
@@ -37,7 +46,7 @@ export class AuthService {
           },
         },
       },
-    }) as any;
+    })) as any;
 
     if (!user) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
@@ -66,14 +75,14 @@ export class AuthService {
 
     // 5. Tạo access token
     const accessToken = this.jwtService.sign(payload);
-    
+
     // Refresh token với thời gian dài hơn (30 days) - optional
     const refreshPayload: JwtPayload = {
       ...payload,
       type: 'refresh',
     };
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: '30d',
+      expiresIn: '1d',
     });
 
     // 6. Log activity
@@ -107,7 +116,7 @@ export class AuthService {
   }
 
   async validateUser(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         role: {
@@ -129,7 +138,7 @@ export class AuthService {
         manager: true,
         subordinates: true,
       },
-    }) as any;
+    })) as any;
 
     if (!user || !user.isActive) {
       return null;
@@ -151,7 +160,10 @@ export class AuthService {
     return bcrypt.hash(password, saltRounds);
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<{ message: string }> {
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, password: true, email: true },
@@ -162,7 +174,10 @@ export class AuthService {
     }
 
     // Verify old password
-    const isOldPasswordValid = await bcrypt.compare(dto.oldPassword, user.password);
+    const isOldPasswordValid = await bcrypt.compare(
+      dto.oldPassword,
+      user.password,
+    );
     if (!isOldPasswordValid) {
       throw new BadRequestException('Mật khẩu cũ không đúng');
     }
@@ -190,7 +205,7 @@ export class AuthService {
   }
 
   async getProfile(userId: string): Promise<UserProfile> {
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         role: {
@@ -224,7 +239,7 @@ export class AuthService {
           },
         },
       },
-    }) as any;
+    })) as any;
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
@@ -292,7 +307,9 @@ export class AuthService {
       // Validate user still exists and is active
       const user = await this.validateUser(payload.sub);
       if (!user) {
-        throw new UnauthorizedException('Người dùng không tồn tại hoặc đã bị vô hiệu hóa');
+        throw new UnauthorizedException(
+          'Người dùng không tồn tại hoặc đã bị vô hiệu hóa',
+        );
       }
 
       // Generate new access token
@@ -308,7 +325,9 @@ export class AuthService {
 
       return { accessToken };
     } catch (error) {
-      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
+      );
     }
   }
 }

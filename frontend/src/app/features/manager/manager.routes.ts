@@ -19,6 +19,10 @@ export const MANAGER_ROUTES: Routes = [
         loadComponent: () => import('./pages/employee-list/employee-list.component').then(m => m.EmployeeListComponent)
       },
       {
+        path: 'employees/:id',
+        loadComponent: () => import('./pages/employee-detail/employee-detail.component').then(m => m.EmployeeDetailComponent)
+      },
+      {
         path: 'departments',
         loadComponent: () => import('./pages/department-list/department-list.component').then(m => m.DepartmentListComponent)
       },

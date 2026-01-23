@@ -1,5 +1,19 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, Patch } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Patch,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -20,24 +34,24 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Đăng nhập thành công',
-      schema: {
-        example: {
-          accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          user: {
-            id: '123',
-            email: 'admin@example.com',
-            fullName: 'Admin User',
-            role: {
-              id: '1',
-              name: 'ADMIN',
-              displayName: 'Administrator',
-              level: 100,
-            },
-            employmentType: 'FULL_TIME',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: '123',
+          email: 'admin@example.com',
+          fullName: 'Admin User',
+          role: {
+            id: '1',
+            name: 'ADMIN',
+            displayName: 'Administrator',
+            level: 100,
           },
+          employmentType: 'FULL_TIME',
         },
       },
+    },
   })
   @ApiResponse({
     status: 401,

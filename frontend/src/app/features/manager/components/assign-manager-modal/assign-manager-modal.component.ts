@@ -2,7 +2,7 @@ import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, Simp
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
-import { EmployeeService } from '@core/services/employee.service';
+import { ManagerService } from '@core/services/manager.service';
 import { Department } from '@core/models/department.model';
 import { LucideAngularModule, X, UserCog, Check, Info } from 'lucide-angular';
 
@@ -21,7 +21,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
 
   private fb = inject(FormBuilder);
   private departmentService = inject(DepartmentService);
-  private employeeService = inject(EmployeeService);
+  private managerService = inject(ManagerService);
   private cdr = inject(ChangeDetectorRef);
 
   form!: FormGroup;
@@ -84,7 +84,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
     this.errorMessage = null;
     
     // Use dedicated endpoint for department managers (DEPT_MANAGER only)
-    this.employeeService.getDepartmentManagers().subscribe({
+    this.managerService.getDepartmentManagers().subscribe({
       next: (managers) => {
         if (!managers || managers.length === 0) {
           this.errorMessage = 'Không có quản lý phòng ban nào trong hệ thống';

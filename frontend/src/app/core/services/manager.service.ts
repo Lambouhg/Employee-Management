@@ -16,7 +16,7 @@ import { PaginatedResponse } from '../models/pagination.model';
 @Injectable({
   providedIn: 'root'
 })
-export class EmployeeService {
+export class ManagerService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/manager/employees`;
 

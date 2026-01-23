@@ -22,13 +22,17 @@ export class ManagerEmployeesController {
   constructor(private readonly employeesService: ManagerEmployeesService) {}
 
   @Get('managers/department')
-  @Permissions('manage_departments', 'manage_all_employees', 'manage_dept_employees')
+  @Permissions(
+    'manage_departments',
+    'manage_all_employees',
+    'manage_dept_employees',
+  )
   getDepartmentManagers() {
     return this.employeesService.getDepartmentManagers();
   }
 
   @Get('managers')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees')
   getManagers() {
     return this.employeesService.getManagers();
   }
@@ -37,10 +41,8 @@ export class ManagerEmployeesController {
   @Permissions(
     'view_all_employees',
     'view_dept_employees',
-    'view_team_members',
     'manage_all_employees',
     'manage_dept_employees',
-    'manage_team_members',
   )
   findAll(@Query() query: EmployeeQueryDto) {
     return this.employeesService.findAll(query);
@@ -50,10 +52,8 @@ export class ManagerEmployeesController {
   @Permissions(
     'view_all_employees',
     'view_dept_employees',
-    'view_team_members',
     'manage_all_employees',
     'manage_dept_employees',
-    'manage_team_members',
   )
   getSubordinates(@Param('managerId', ParseUUIDPipe) managerId: string) {
     return this.employeesService.getSubordinates(managerId);
@@ -63,23 +63,21 @@ export class ManagerEmployeesController {
   @Permissions(
     'view_all_employees',
     'view_dept_employees',
-    'view_team_members',
     'manage_all_employees',
     'manage_dept_employees',
-    'manage_team_members',
   )
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.employeesService.findById(id);
   }
 
   @Post()
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   create(@Body() dto: CreateEmployeeDto) {
     return this.employeesService.create(dto);
   }
 
   @Patch(':id')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEmployeeDto,
@@ -88,25 +86,25 @@ export class ManagerEmployeesController {
   }
 
   @Delete(':id')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.employeesService.remove(id);
   }
 
   @Patch(':id/activate')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.employeesService.activate(id);
   }
 
   @Patch(':id/deactivate')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   deactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.employeesService.deactivate(id);
   }
 
   @Patch(':id/reset-password')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   resetPassword(@Param('id', ParseUUIDPipe) id: string) {
     return this.employeesService.resetPassword(id);
   }
@@ -121,7 +119,7 @@ export class ManagerEmployeesController {
   }
 
   @Patch(':id/assign-manager')
-  @Permissions('manage_all_employees', 'manage_dept_employees', 'manage_team_members')
+  @Permissions('manage_all_employees', 'manage_dept_employees')
   assignManager(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignManagerDto,

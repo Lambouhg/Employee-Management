@@ -1,5 +1,14 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { EmploymentType } from '@prisma/client';
 
 export class EmployeeQueryDto {
@@ -24,7 +33,9 @@ export class EmployeeQueryDto {
   departmentId?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined ? undefined : value === 'true' || value === true))
+  @Transform(({ value }) =>
+    value === undefined ? undefined : value === 'true' || value === true,
+  )
   @IsBoolean()
   isActive?: boolean;
 

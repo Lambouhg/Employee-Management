@@ -1,10 +1,10 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Users, UserCheck, UserX, RefreshCw, Edit, Trash2, MoreVertical } from 'lucide-angular';
+import { LucideAngularModule, Users, UserCheck, UserX, RefreshCw, Edit, Trash2, MoreVertical, Eye } from 'lucide-angular';
 import { Employee } from '@core/models/employee.model';
 
 export interface EmployeeActionEvent {
-  type: 'toggle-status' | 'reset-password' | 'edit' | 'delete';
+  type: 'toggle-status' | 'reset-password' | 'edit' | 'delete' | 'view';
   employeeId: string;
   employee?: Employee;
 }
@@ -38,6 +38,7 @@ export class EmployeeTableComponent {
   readonly Edit = Edit;
   readonly Trash2 = Trash2;
   readonly MoreVertical = MoreVertical;
+  readonly Eye = Eye;
 
   readonly Math = Math;
 

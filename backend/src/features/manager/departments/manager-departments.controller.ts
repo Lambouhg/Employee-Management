@@ -37,7 +37,11 @@ export class ManagerDepartmentsController {
   }
 
   @Get(':id')
-  @Permissions('manage_departments', 'view_all_employees', 'view_dept_employees')
+  @Permissions(
+    'manage_departments',
+    'view_all_employees',
+    'view_dept_employees',
+  )
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.departmentsService.findOne(id);
   }
