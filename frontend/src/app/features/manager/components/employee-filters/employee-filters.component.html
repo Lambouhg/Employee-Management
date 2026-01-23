@@ -1,0 +1,90 @@
+<div class="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto">
+  <div class="p-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-gray-900">Filters</h3>
+      <button (click)="onClose()" class="p-1 hover:bg-gray-200 rounded">
+        <i-lucide [img]="X" class="w-4 h-4 text-gray-500"></i-lucide>
+      </button>
+    </div>
+
+    <!-- Clear All -->
+    <button 
+      *ngIf="hasActiveFilters()"
+      (click)="onClearAll()" 
+      class="w-full mb-4 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+      Clear all filters
+    </button>
+
+    <!-- Status Filter -->
+    <div class="mb-6">
+      <h4 class="text-sm font-medium text-gray-700 mb-2">Status</h4>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="radio" 
+            name="status" 
+            value="all"
+            [checked]="filterState().selectedStatus === 'all'"
+            (change)="onStatusChange('all')"
+            class="text-indigo-600">
+          <span class="text-sm text-gray-700">All</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="radio" 
+            name="status" 
+            value="active"
+            [checked]="filterState().selectedStatus === 'active'"
+            (change)="onStatusChange('active')"
+            class="text-indigo-600">
+          <span class="text-sm text-gray-700">Active only</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="radio" 
+            name="status" 
+            value="inactive"
+            [checked]="filterState().selectedStatus === 'inactive'"
+            (change)="onStatusChange('inactive')"
+            class="text-indigo-600">
+          <span class="text-sm text-gray-700">Inactive only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Department Filter -->
+    <div class="mb-6">
+      <h4 class="text-sm font-medium text-gray-700 mb-2">Department</h4>
+      <div class="space-y-2">
+        <label 
+          *ngFor="let dept of departments()" 
+          class="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="checkbox" 
+            [checked]="isDepartmentSelected(dept.id)"
+            (change)="onDepartmentToggle(dept.id)"
+            class="rounded text-indigo-600">
+          <span class="text-sm text-gray-700">{{ dept.name }}</span>
+          <span class="ml-auto px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">{{ dept.code }}</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Role Filter -->
+    <div class="mb-6">
+      <h4 class="text-sm font-medium text-gray-700 mb-2">Role</h4>
+      <div class="space-y-2">
+        <label 
+          *ngFor="let role of roles()" 
+          class="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="checkbox" 
+            [checked]="isRoleSelected(role.id)"
+            (change)="onRoleToggle(role.id)"
+            class="rounded text-indigo-600">
+          <span class="text-sm text-gray-700">{{ role.displayName }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,41 @@
+<div class="px-8 py-4 border-b border-gray-200 flex items-center gap-4">
+  <!-- Search -->
+  <div class="flex-1 relative">
+    <i-lucide [img]="Search" class="w-5 h-5 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"></i-lucide>
+    <input 
+      type="text" 
+      placeholder="Search by name or email" 
+      [(ngModel)]="searchText"
+      (keyup.enter)="onSearch()"
+      class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+  </div>
+
+  <!-- Search Button -->
+  <button 
+    (click)="onSearch()"
+    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+    <i-lucide [img]="Search" class="w-4 h-4"></i-lucide>
+    <span>Search</span>
+  </button>
+
+  <!-- Filters Toggle -->
+  <button 
+    (click)="onFiltersToggle()"
+    [class]="showFilters() 
+      ? 'px-4 py-2 border-2 border-indigo-600 bg-indigo-50 text-indigo-600 rounded-lg flex items-center gap-2'
+      : 'px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2'">
+    <i-lucide [img]="Filter" class="w-4 h-4"></i-lucide>
+    <span>Filters</span>
+    <span *ngIf="activeFiltersCount() > 0" class="ml-1 px-2 py-0.5 bg-indigo-600 text-white text-xs rounded-full">
+      {{ activeFiltersCount() }}
+    </span>
+  </button>
+
+  <!-- Sort -->
+  <button 
+    (click)="onSortClick()"
+    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+    <i-lucide [img]="ArrowUpDown" class="w-4 h-4"></i-lucide>
+    <span>Sort by</span>
+  </button>
+</div>

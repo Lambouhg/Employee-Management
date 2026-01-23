@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://employee-management-1-h9ux.onrender.com',
+  apiUrl: 'https://employee-management-1-qhym.onrender.com',
   apiTimeout: 30000
 };

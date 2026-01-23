@@ -20,7 +20,7 @@ async function bootstrap() {
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:4200',
       'http://localhost:4200',
-      /\.vercel\.app$/,  // Allow all Vercel deployments
+      /\.vercel\.app$/, // Allow all Vercel deployments
     ],
     credentials: true,
   });
@@ -48,6 +48,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger docs available at: http://localhost:${port}/api-docs`);
+  console.log(
+    `📚 Swagger docs available at: http://localhost:${port}/api-docs`,
+  );
 }
 bootstrap();

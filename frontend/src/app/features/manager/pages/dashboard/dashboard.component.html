@@ -1,0 +1,168 @@
+
+    <div class="flex h-screen overflow-hidden">
+      
+      <div class="flex-1 flex flex-col bg-gray-50 overflow-auto">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-8 py-6">
+          <h1 class="text-2xl font-semibold text-gray-900">Manager Dashboard</h1>
+          <p class="text-sm text-gray-500 mt-1">Overview of your team and pending approvals</p>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 p-8">
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Employees -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 mb-1">Total Employees</p>
+                  <p class="text-3xl font-bold text-gray-900">{{ statistics.totalEmployees }}</p>
+                </div>
+                <div class="p-3 bg-blue-100 rounded-lg">
+                  <i-lucide [img]="Users" class="w-6 h-6 text-blue-600"></i-lucide>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-4">Active: {{ statistics.activeEmployees }}</p>
+            </div>
+
+            <!-- Pending Schedules -->
+            <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                 (click)="navigateTo('/manager/approvals/schedules')">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 mb-1">Pending Schedules</p>
+                  <p class="text-3xl font-bold text-orange-600">{{ statistics.pendingSchedules }}</p>
+                </div>
+                <div class="p-3 bg-orange-100 rounded-lg">
+                  <i-lucide [img]="Calendar" class="w-6 h-6 text-orange-600"></i-lucide>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-4">Click to review</p>
+            </div>
+
+            <!-- Pending Leave Requests -->
+            <div class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                 (click)="navigateTo('/manager/approvals/leaves')">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 mb-1">Pending Leaves</p>
+                  <p class="text-3xl font-bold text-purple-600">{{ statistics.pendingLeaves }}</p>
+                </div>
+                <div class="p-3 bg-purple-100 rounded-lg">
+                  <i-lucide [img]="UserCheck" class="w-6 h-6 text-purple-600"></i-lucide>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-4">Click to review</p>
+            </div>
+
+            <!-- Attendance Rate -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 mb-1">Attendance Rate</p>
+                  <p class="text-3xl font-bold text-green-600">{{ statistics.attendanceRate }}%</p>
+                </div>
+                <div class="p-3 bg-green-100 rounded-lg">
+                  <i-lucide [img]="TrendingUp" class="w-6 h-6 text-green-600"></i-lucide>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-4">This week</p>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              </div>
+              <div class="p-6 space-y-4">
+                <button 
+                  (click)="navigateTo('/manager/employees')"
+                  class="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <i-lucide [img]="Users" class="w-5 h-5 text-gray-600"></i-lucide>
+                  <div class="flex-1 text-left">
+                    <p class="font-medium text-gray-900">Manage Employees</p>
+                    <p class="text-sm text-gray-500">View and manage your team</p>
+                  </div>
+                </button>
+
+                <button 
+                  (click)="navigateTo('/manager/approvals/schedules')"
+                  class="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <i-lucide [img]="Calendar" class="w-5 h-5 text-gray-600"></i-lucide>
+                  <div class="flex-1 text-left">
+                    <p class="font-medium text-gray-900">Review Schedules</p>
+                    <p class="text-sm text-gray-500">Approve or reject work schedules</p>
+                  </div>
+                </button>
+
+                <button 
+                  (click)="navigateTo('/manager/approvals/leaves')"
+                  class="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <i-lucide [img]="CheckCircle" class="w-5 h-5 text-gray-600"></i-lucide>
+                  <div class="flex-1 text-left">
+                    <p class="font-medium text-gray-900">Review Leave Requests</p>
+                    <p class="text-sm text-gray-500">Approve or reject leave requests</p>
+                  </div>
+                </button>
+
+                <button 
+                  (click)="navigateTo('/manager/reports/attendance')"
+                  class="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <i-lucide [img]="FileText" class="w-5 h-5 text-gray-600"></i-lucide>
+                  <div class="flex-1 text-left">
+                    <p class="font-medium text-gray-900">View Reports</p>
+                    <p class="text-sm text-gray-500">Attendance and productivity reports</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="bg-white rounded-lg shadow">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Notifications</h2>
+              </div>
+              <div class="p-6">
+                <div *ngIf="isLoading" class="text-center py-8">
+                  <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-indigo-600"></div>
+                </div>
+                <div *ngIf="!isLoading" class="space-y-4">
+                  <div *ngIf="statistics.pendingSchedules > 0" 
+                       class="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div class="flex items-start gap-3">
+                      <i-lucide [img]="Calendar" class="w-5 h-5 text-orange-600 mt-0.5"></i-lucide>
+                      <div>
+                        <p class="font-medium text-gray-900">Pending Schedule Approvals</p>
+                        <p class="text-sm text-gray-600">{{ statistics.pendingSchedules }} work schedules waiting for approval</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div *ngIf="statistics.pendingLeaves > 0" 
+                       class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div class="flex items-start gap-3">
+                      <i-lucide [img]="UserCheck" class="w-5 h-5 text-purple-600 mt-0.5"></i-lucide>
+                      <div>
+                        <p class="font-medium text-gray-900">Pending Leave Requests</p>
+                        <p class="text-sm text-gray-600">{{ statistics.pendingLeaves }} leave requests need your attention</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div *ngIf="statistics.pendingSchedules === 0 && statistics.pendingLeaves === 0" 
+                       class="text-center py-8">
+                    <i-lucide [img]="CheckCircle" class="w-12 h-12 text-green-500 mx-auto mb-2"></i-lucide>
+                    <p class="text-gray-500">All caught up! No pending approvals.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  

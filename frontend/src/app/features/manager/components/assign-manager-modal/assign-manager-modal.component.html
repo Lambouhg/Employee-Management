@@ -1,0 +1,92 @@
+<!-- Modal Overlay -->
+<div
+  class="fixed inset-0 flex items-center justify-center z-50 p-4
+         bg-white/30 backdrop-blur-sm">
+         <div
+         class="
+           bg-white
+           rounded-lg
+           max-w-md w-full
+           max-h-[90vh] overflow-y-auto
+           border border-gray-300
+           shadow-lg
+         ">
+           <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-indigo-100 rounded-lg">
+          <i-lucide [img]="UserCog" class="w-5 h-5 text-indigo-600"></i-lucide>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Assign Department Manager</h3>
+          <p class="text-sm text-gray-500">Select a manager for {{ department?.name }}</p>
+        </div>
+      </div>
+      <button (click)="onClose()" class="p-2 hover:bg-gray-100 rounded-lg">
+        <i-lucide [img]="X" class="w-5 h-5 text-gray-400"></i-lucide>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6">
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600">{{ errorMessage }}</p>
+      </div>
+
+      <!-- Manager Selection -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Department Manager
+        </label>
+        <div class="relative">
+          <div *ngIf="isLoadingManagers" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10 rounded-lg">
+            <div class="text-center">
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent"></div>
+              <p class="text-xs text-gray-500 mt-2">Đang tải...</p>
+            </div>
+          </div>
+          <select
+            formControlName="managerId"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white appearance-none"
+            [disabled]="isLoadingManagers || managersList.length === 0">
+            <option [value]="null">{{ isLoadingManagers ? 'Đang tải...' : (managersList.length === 0 ? 'Không có quản lý phòng ban' : '-- Chọn quản lý --') }}</option>
+            <option *ngFor="let manager of managersList" [value]="manager.id">
+              {{ manager.fullName }} ({{ manager.email }})
+            </option>
+          </select>
+        </div>
+        <p *ngIf="!isLoadingManagers && managersList.length === 0" class="text-xs text-amber-600 mt-2">
+          ⚠️ Không có quản lý phòng ban (DEPT_MANAGER) nào trong hệ thống.
+        </p>
+      </div>
+
+      <!-- Info -->
+      <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-start gap-3">
+          <i-lucide [img]="Info" class="w-5 h-5 text-blue-600 mt-0.5"></i-lucide>
+          <div>
+            <p class="text-sm text-blue-800 font-medium">Note: all employees in this department will automatically report to this Manager</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        <button type="button" (click)="onClose()"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+          Cancel
+        </button>
+        <button type="submit"
+                [disabled]="isSubmitting"
+                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center gap-2">
+          <span *ngIf="isSubmitting">
+            <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          </span>
+          <i-lucide *ngIf="!isSubmitting" [img]="Check" class="w-4 h-4"></i-lucide>
+          <span>{{ isSubmitting ? 'Assigning...' : 'Assign Manager' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,157 @@
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-indigo-100 rounded-lg">
+          <i-lucide [img]="Users" class="w-5 h-5 text-indigo-600"></i-lucide>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Manage Department Employees</h3>
+          <p class="text-sm text-gray-500">Add or remove employees from {{ department?.name }}</p>
+        </div>
+      </div>
+      <button (click)="onClose()" class="p-2 hover:bg-gray-100 rounded-lg">
+        <i-lucide [img]="X" class="w-5 h-5 text-gray-400"></i-lucide>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6">
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-600">{{ errorMessage }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Add Employees Section -->
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="text-md font-semibold text-gray-900 flex items-center gap-2">
+              <i-lucide [img]="UserPlus" class="w-4 h-4 text-green-600"></i-lucide>
+              Add Employees
+            </h4>
+            <button (click)="selectAllToAdd()"
+                    class="text-sm text-indigo-600 hover:text-indigo-700">
+              {{ selectedToAdd.size === availableEmployees.length ? 'Deselect All' : 'Select All' }}
+            </button>
+          </div>
+
+          <div class="max-h-64 overflow-y-auto">
+            <div *ngFor="let employee of availableEmployees"
+                 class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg">
+              <input type="checkbox"
+                     [checked]="selectedToAdd.has(employee.id)"
+                     (change)="toggleAddEmployee(employee.id)"
+                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                  {{ getInitials(employee.fullName) }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ employee.fullName }}</p>
+                  <p class="text-xs text-gray-500 truncate">{{ employee.email }}</p>
+                </div>
+                <span class="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded-full flex-shrink-0">
+                  {{ employee.role.displayName }}
+                </span>
+              </div>
+            </div>
+            <p *ngIf="availableEmployees.length === 0" class="text-sm text-gray-500 italic text-center py-4">
+              No available employees
+            </p>
+          </div>
+        </div>
+
+        <!-- Remove Employees Section -->
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="text-md font-semibold text-gray-900 flex items-center gap-2">
+              <i-lucide [img]="UserMinus" class="w-4 h-4 text-red-600"></i-lucide>
+              Remove Employees
+            </h4>
+            <button (click)="selectAllToRemove()"
+                    class="text-sm text-indigo-600 hover:text-indigo-700">
+              {{ selectedToRemove.size === currentEmployees.length ? 'Deselect All' : 'Select All' }}
+            </button>
+          </div>
+
+          <div class="max-h-64 overflow-y-auto">
+            <div *ngFor="let employee of currentEmployees"
+                 class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg">
+              <input type="checkbox"
+                     [checked]="selectedToRemove.has(employee.id)"
+                     (change)="toggleRemoveEmployee(employee.id)"
+                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                  {{ getInitials(employee.fullName) }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ employee.fullName }}</p>
+                  <p class="text-xs text-gray-500 truncate">{{ employee.email }}</p>
+                </div>
+                <span class="text-xs text-gray-500 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full flex-shrink-0">
+                  {{ employee.role.displayName }}
+                </span>
+              </div>
+            </div>
+            <p *ngIf="currentEmployees.length === 0" class="text-sm text-gray-500 italic text-center py-4">
+              No employees in department
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center gap-4">
+            <span class="text-green-600 font-medium">
+              +{{ selectedToAdd.size }} to add
+            </span>
+            <span class="text-red-600 font-medium">
+              -{{ selectedToRemove.size }} to remove
+            </span>
+          </div>
+          <span class="text-gray-600">
+            New total: {{ currentEmployees.length + selectedToAdd.size - selectedToRemove.size }} employees
+          </span>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-start gap-3">
+          <i-lucide [img]="Info" class="w-5 h-5 text-blue-600 mt-0.5"></i-lucide>
+          <div>
+            <p class="text-sm text-blue-800 font-medium">Note:</p>
+            <p class="text-sm text-blue-700">
+              When adding employees, they will automatically report to the department's DEPT_MANAGER.
+              When removing employees, their manager relationship will also be cleared.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+      <button type="button" (click)="onClose()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+        Cancel
+      </button>
+      <button type="button"
+              (click)="onSubmit()"
+              [disabled]="isSubmitting || (selectedToAdd.size === 0 && selectedToRemove.size === 0)"
+              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center gap-2">
+        <span *ngIf="isSubmitting">
+          <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+        </span>
+        <i-lucide *ngIf="!isSubmitting" [img]="Check" class="w-4 h-4"></i-lucide>
+        <span>{{ isSubmitting ? 'Updating...' : 'Update Employees' }}</span>
+      </button>
+    </div>
+  </div>
+</div>

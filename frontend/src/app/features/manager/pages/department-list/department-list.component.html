@@ -1,0 +1,113 @@
+<!-- Header -->
+<div class="bg-white border-b border-gray-200 px-8 py-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Departments</h1>
+      <p class="text-sm text-gray-500 mt-1">Manage organizational departments and structure</p>
+    </div>
+    <button (click)="openDepartmentForm()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+      <i-lucide [img]="Plus" class="w-4 h-4"></i-lucide>
+      <span>Add Department</span>
+    </button>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="flex-1 p-8">
+          <!-- Loading State -->
+          <div *ngIf="isLoading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-indigo-600"></div>
+            <p class="text-gray-500 mt-4">Loading departments...</p>
+          </div>
+
+          <!-- Departments Grid -->
+          <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div *ngFor="let dept of departments" 
+                 class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200">
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="p-3 bg-indigo-100 rounded-lg">
+                    <i-lucide [img]="Building2" class="w-6 h-6 text-indigo-600"></i-lucide>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-900">{{ dept.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ dept.code }}</p>
+                  </div>
+                </div>
+                <button (click)="openDepartmentForm(dept.id)" class="p-2 hover:bg-gray-100 rounded-lg">
+                  <i-lucide [img]="Edit" class="w-4 h-4 text-gray-600"></i-lucide>
+                </button>
+              </div>
+
+              <!-- Manager Info -->
+              <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-gray-500">Department Manager</p>
+                  <button (click)="openAssignManager(dept)" class="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <i-lucide [img]="UserCog" class="w-3 h-3"></i-lucide>
+                    <span>{{ dept.manager ? 'Change' : 'Assign' }}</span>
+                  </button>
+                </div>
+                <div *ngIf="dept.manager" class="flex items-center gap-2">
+                  <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {{ getInitials(dept.manager.fullName) }}
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">{{ dept.manager.fullName }}</p>
+                    <p class="text-xs text-gray-500">{{ dept.manager.email }}</p>
+                  </div>
+                </div>
+                <p *ngIf="!dept.manager" class="text-sm text-gray-400 italic">Chưa có quản lý phòng ban</p>
+              </div>
+
+              <!-- Stats -->
+              <div class="mb-4">
+                <div>
+                  <p class="text-2xl font-bold text-gray-900">{{ dept._count?.employees || 0 }}</p>
+                  <p class="text-xs text-gray-500">Employees</p>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div class="flex items-center gap-2">
+                  <button (click)="toggleExpanded(dept.id)" class="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    {{ isExpanded(dept.id) ? 'Hide' : 'View Details' }}
+                    <i-lucide [img]="ChevronRight" class="w-4 h-4" [ngClass]="{ 'rotate-90': isExpanded(dept.id) }"></i-lucide>
+                  </button>
+                  <button (click)="deleteDepartment(dept.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-600">
+                    <i-lucide [img]="Trash2" class="w-4 h-4"></i-lucide>
+                  </button>
+                </div>
+              </div>
+              <!-- Expanded Details -->
+              <div *ngIf="isExpanded(dept.id)" class="mt-4 border-t pt-4">
+                <p class="text-sm font-medium mb-2">Employees</p>
+                <ul class="space-y-2">
+                  <li *ngFor="let emp of dept.employees">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="text-sm font-medium">{{ emp.fullName }}</p>
+                        <p class="text-xs text-gray-500">{{ emp.email }}</p>
+                      </div>
+                      <div class="text-xs text-gray-500">{{ emp.role.displayName }}</div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+<!-- Department Form Modal -->
+<app-department-form-modal *ngIf="showDepartmentForm" [departmentId]="editingDepartmentId" (closed)="closeDepartmentForm()" (saved)="onDepartmentSaved()"></app-department-form-modal>
+
+<!-- Assign Manager Modal -->
+<app-assign-manager-modal
+  *ngIf="showAssignManager"
+  [departmentId]="selectedDepartmentId"
+  [department]="selectedDepartment"
+  [managers]="departmentManagers"
+  (closed)="closeAssignManager()"
+  (saved)="onManagerAssigned()">
+</app-assign-manager-modal> 

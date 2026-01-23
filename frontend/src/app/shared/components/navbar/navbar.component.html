@@ -1,0 +1,128 @@
+<aside
+  class="bg-white border-r border-gray-200 flex flex-col h-screen transition-all duration-300"
+  [class.w-20]="isCollapsed"
+  [class.w-64]="!isCollapsed"
+>
+  <!-- Logo + Toggle -->
+  <div class="p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+      >
+        M
+      </div>
+
+      @if (!isCollapsed) {
+        <h2 class="text-lg font-semibold text-gray-900">EMM</h2>
+      }
+    </div>
+
+    <button
+      (click)="toggleCollapse()"
+      class="p-1 rounded hover:bg-gray-100"
+    >
+      <i-lucide
+        [img]="PanelLeft"
+        class="w-5 h-5 transition-transform"
+        [class.rotate-180]="isCollapsed"
+      ></i-lucide>
+    </button>
+  </div>
+
+  <nav class="flex-1 flex flex-col px-2 py-4 overflow-y-auto">
+    <!-- Menu -->
+    <div class="flex-1 space-y-1">
+      @for (item of menuItems; track item.route) {
+        @if (shouldShowMenuItem(item)) {
+          <div class="relative group">
+            <button
+              (click)="navigateTo(item.route)"
+              class="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
+              [ngClass]="{
+                'justify-center': isCollapsed,
+                'bg-indigo-50 text-indigo-600': isActive(item.route),
+                'hover:bg-gray-50 text-gray-700': !isActive(item.route)
+              }"
+            >
+              <i-lucide [img]="item.icon" class="w-5 h-5"></i-lucide>
+
+              @if (!isCollapsed) {
+                <span class="text-sm font-medium">
+                  {{ item.label }}
+                </span>
+              }
+            </button>
+
+            <!-- Tooltip -->
+            @if (isCollapsed) {
+              <span
+                class="absolute left-full top-1/2 -translate-y-1/2 ml-2
+                       px-2 py-1 text-xs rounded bg-gray-900 text-white
+                       opacity-0 group-hover:opacity-100 transition whitespace-nowrap"
+              >
+                {{ item.label }}
+              </span>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="mt-4 pt-4 border-t border-gray-200 space-y-1">
+      <button
+        (click)="navigateToChangePassword()"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 transition-all"
+        [class.justify-center]="isCollapsed"
+      >
+        <i-lucide [img]="Settings" class="w-5 h-5"></i-lucide>
+        @if (!isCollapsed) {
+          <span class="text-sm font-medium">Đổi mật khẩu</span>
+        }
+      </button>
+
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 transition-all"
+        [class.justify-center]="isCollapsed"
+      >
+        <i-lucide [img]="HelpCircle" class="w-5 h-5"></i-lucide>
+        @if (!isCollapsed) {
+          <span class="text-sm font-medium">Support</span>
+        }
+      </button>
+    </div>
+
+    <!-- User Info -->
+    <div class="mt-4 pt-4 border-t border-gray-200">
+      <div
+        class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all"
+        [class.justify-center]="isCollapsed"
+      >
+        <div
+          class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600
+                 flex items-center justify-center text-white font-semibold text-sm"
+        >
+          {{ getUserInitials() }}
+        </div>
+
+        @if (!isCollapsed) {
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate">
+              {{ currentUser?.fullName }}
+            </div>
+            <div class="text-xs text-gray-500 truncate">
+              {{ currentUser?.email }}
+            </div>
+          </div>
+
+          <button
+            (click)="logout()"
+            class="text-gray-400 hover:text-red-500"
+          >
+            <i-lucide [img]="LogOut" class="w-4 h-4"></i-lucide>
+          </button>
+        }
+      </div>
+    </div>
+  </nav>
+</aside>

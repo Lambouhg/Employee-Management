@@ -1,0 +1,48 @@
+<div class="flex h-screen overflow-hidden">
+  <app-navbar 
+    [currentUser]="currentUser" 
+    [menuItems]="menuItems"
+    [activeRoute]="'/dashboard'">
+  </app-navbar>
+
+  <div class="flex-1 p-10 bg-gray-50 overflow-y-auto">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Chào mừng, {{ currentUser?.fullName }}!</h1>
+      <p class="text-gray-600 mb-8">Vai trò: <strong class="text-indigo-600">{{ currentUser?.role.displayName }}</strong></p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h3 class="text-sm font-medium text-gray-500 mb-2">Email</h3>
+          <p class="text-lg font-semibold text-gray-900 break-words">{{ currentUser?.email }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h3 class="text-sm font-medium text-gray-500 mb-2">Loại hình</h3>
+          <p class="text-lg font-semibold text-gray-900">{{ getEmploymentType() }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h3 class="text-sm font-medium text-gray-500 mb-2">Trạng thái</h3>
+          <p class="text-lg font-semibold" [class.text-green-600]="currentUser?.isActive" [class.text-red-600]="!currentUser?.isActive">
+            {{ currentUser?.isActive ? 'Hoạt động' : 'Không hoạt động' }}
+          </p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h3 class="text-sm font-medium text-gray-500 mb-2">Số quyền</h3>
+          <p class="text-lg font-semibold text-gray-900">{{ currentUser?.permissions?.length || 0 }} quyền</p>
+        </div>
+      </div>
+
+      @if (currentUser?.permissions && currentUser.permissions.length > 0) {
+        <div class="bg-white rounded-xl shadow-sm p-8">
+          <h2 class="text-xl font-semibold text-gray-900 mb-5">Quyền hạn của bạn</h2>
+          <div class="flex flex-wrap gap-3 max-h-80 overflow-y-auto">
+            @for (permission of currentUser.permissions; track permission) {
+              <span class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+                {{ formatPermission(permission) }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
