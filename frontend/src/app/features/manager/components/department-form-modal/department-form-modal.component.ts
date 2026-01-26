@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
 import { DepartmentDetail } from '@core/models/department.model';
-import { LucideAngularModule, X, Info } from 'lucide-angular';
+import { LucideAngularModule, X, Info, Building2, Hash, FileText } from 'lucide-angular';
 
 @Component({
   selector: 'app-department-form-modal',
@@ -22,10 +22,14 @@ export class DepartmentFormModalComponent implements OnInit {
   form!: FormGroup;
   isEdit = false;
   isSubmitting = false;
+  isLoading = false;
   errorMessage: string | null = null;
 
   readonly X = X;
   readonly Info = Info;
+  readonly Building2 = Building2;
+  readonly Hash = Hash;
+  readonly FileText = FileText;
 
   ngOnInit(): void {
     this.isEdit = !!this.departmentId;
@@ -43,13 +47,16 @@ export class DepartmentFormModalComponent implements OnInit {
 
   loadData() {
     if (this.isEdit && this.departmentId) {
+      this.isLoading = true;
       this.departmentService.getDepartmentDetail(this.departmentId).subscribe({
         next: (detail) => {
           this.patchForm(detail);
+          this.isLoading = false;
         },
         error: (err) => {
           console.error('Error loading department form data', err);
           this.errorMessage = 'Không thể tải dữ liệu phòng ban';
+          this.isLoading = false;
         }
       });
     }

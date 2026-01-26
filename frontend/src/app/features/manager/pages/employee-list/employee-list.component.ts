@@ -74,9 +74,8 @@ export class EmployeeListComponent implements OnInit {
   isLoading = false;
   error: string | null = null;
   
-  // Modal states
+  // Modal states (only for creating new employees)
   showEmployeeForm = false;
-  selectedEmployeeId?: string;
   
   // Lucide Icons
   readonly Plus = Plus;
@@ -268,14 +267,13 @@ export class EmployeeListComponent implements OnInit {
     });
   }
 
-  openEmployeeForm(employeeId?: string): void {
-    this.selectedEmployeeId = employeeId;
+  openEmployeeForm(): void {
+    // Only for creating new employees
     this.showEmployeeForm = true;
   }
 
   closeEmployeeForm(): void {
     this.showEmployeeForm = false;
-    this.selectedEmployeeId = undefined;
   }
 
   onEmployeeSaved(): void {
@@ -360,9 +358,6 @@ export class EmployeeListComponent implements OnInit {
         break;
       case 'reset-password':
         if (event.employee) this.resetPassword(event.employee);
-        break;
-      case 'edit':
-        this.openEmployeeForm(event.employeeId);
         break;
       case 'delete':
         this.deleteEmployee(event.employeeId);

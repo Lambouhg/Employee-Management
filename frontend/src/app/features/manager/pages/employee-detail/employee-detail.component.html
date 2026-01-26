@@ -229,3 +229,12 @@
     </div>
   </div>
 </div>
+
+<!-- Employee Form Modal for Editing -->
+<app-employee-form-modal
+  *ngIf="showEmployeeForm && employee"
+  [employeeId]="employee.id"
+  [employeeData]="employee"
+  (closed)="closeEmployeeForm()"
+  (saved)="onEmployeeSaved()">
+</app-employee-form-modal>

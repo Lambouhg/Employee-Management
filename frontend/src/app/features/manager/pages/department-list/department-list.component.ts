@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DepartmentService } from '@core/services/department.service';
@@ -19,7 +19,8 @@ import {
   UserPlus,
   UserMinus,
   UserCog,
-  MoreVertical
+  MoreVertical,
+  Users
 } from 'lucide-angular';
 
 @Component({
@@ -31,6 +32,7 @@ import {
     LucideAngularModule,
     DepartmentFormModalComponent,
     AssignManagerModalComponent,
+    ManageEmployeesModalComponent,
   ],
   templateUrl:'./department-list.component.html',
 })
@@ -47,12 +49,17 @@ export class DepartmentListComponent implements OnInit {
   public readonly UserMinus = UserMinus;
   public readonly UserCog = UserCog;
   public readonly MoreVertical = MoreVertical;
+  public readonly Users = Users;
 
   constructor(
     public departmentService: DepartmentService,
     private employeeService: ManagerService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  // Search and Filter
+  searchTerm = '';
+  filterStatus: 'all' | 'with-manager' | 'without-manager' = 'all';
 
   // Modal states
   showDepartmentForm = false;
@@ -71,6 +78,43 @@ export class DepartmentListComponent implements OnInit {
 
   // Expanded state for department cards
   private expandedIds = new Set<string>();
+
+  // Filtered departments based on search and filter
+  get filteredDepartments(): Department[] {
+    return this.departments.filter(dept => {
+      // Search filter
+      const searchMatch = !this.searchTerm || 
+        dept.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        dept.code.toLowerCase().includes(this.searchTerm.toLowerCase());
+      
+      // Status filter
+      let statusMatch = true;
+      if (this.filterStatus === 'with-manager') {
+        statusMatch = !!dept.manager;
+      } else if (this.filterStatus === 'without-manager') {
+        statusMatch = !dept.manager;
+      }
+      
+      return searchMatch && statusMatch;
+    });
+  }
+
+  // Statistics methods
+  getTotalEmployees(): number {
+    return this.departments.reduce((sum, dept) => sum + (dept._count?.employees || 0), 0);
+  }
+
+  getDepartmentsWithManager(): number {
+    return this.departments.filter(dept => dept.manager).length;
+  }
+
+  getDepartmentsWithoutManager(): number {
+    return this.departments.filter(dept => !dept.manager).length;
+  }
+
+  trackByDeptId(index: number, dept: Department): string {
+    return dept.id;
+  }
 
   ngOnInit(): void {
     this.loadDepartments();
@@ -135,6 +179,7 @@ export class DepartmentListComponent implements OnInit {
   openDepartmentForm(deptId?: string): void {
     this.editingDepartmentId = deptId;
     this.showDepartmentForm = true;
+    this.closeDropdown();
   }
 
   closeDepartmentForm(): void {
@@ -158,6 +203,7 @@ export class DepartmentListComponent implements OnInit {
   }
 
   deleteDepartment(id: string): void {
+    this.closeDropdown();
     if (!confirm('Bạn có chắc chắn muốn xóa phòng ban này?')) return;
     this.departmentService.remove(id).subscribe({
       next: () => this.loadDepartments(),
@@ -211,5 +257,15 @@ export class DepartmentListComponent implements OnInit {
     return names.length > 1 
       ? names[0][0] + names[names.length - 1][0]
       : names[0][0];
+  }
+
+  // Close dropdown when clicking outside
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Check if click is outside dropdown
+    if (!target.closest('.dropdown-container') && this.openDropdownId) {
+      this.closeDropdown();
+    }
   }
 }

@@ -62,6 +62,15 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
     this.selectedToRemove.clear();
   }
 
+  isDepartmentManager(employeeId: string): boolean {
+    return this.department?.manager?.id === employeeId;
+  }
+
+  canRemoveEmployee(employeeId: string): boolean {
+    // Cannot remove department manager
+    return !this.isDepartmentManager(employeeId);
+  }
+
   toggleAddEmployee(employeeId: string): void {
     if (this.selectedToAdd.has(employeeId)) {
       this.selectedToAdd.delete(employeeId);
@@ -71,6 +80,11 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
   }
 
   toggleRemoveEmployee(employeeId: string): void {
+    // Cannot remove department manager
+    if (this.isDepartmentManager(employeeId)) {
+      return;
+    }
+    
     if (this.selectedToRemove.has(employeeId)) {
       this.selectedToRemove.delete(employeeId);
     } else {
@@ -87,10 +101,13 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
   }
 
   selectAllToRemove(): void {
-    if (this.selectedToRemove.size === this.currentEmployees.length) {
+    // Filter out department manager
+    const removableEmployees = this.currentEmployees.filter(emp => this.canRemoveEmployee(emp.id));
+    
+    if (this.selectedToRemove.size === removableEmployees.length) {
       this.selectedToRemove.clear();
     } else {
-      this.currentEmployees.forEach(emp => this.selectedToRemove.add(emp.id));
+      removableEmployees.forEach(emp => this.selectedToRemove.add(emp.id));
     }
   }
 

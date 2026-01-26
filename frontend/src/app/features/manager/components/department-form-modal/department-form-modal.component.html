@@ -1,41 +1,149 @@
-<div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50" (click)="onClose()">
-  <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 p-6" (click)="$event.stopPropagation()">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="text-lg font-semibold">{{ isEdit ? 'Edit Department' : 'Create Department' }}</h3>
-        <p class="text-sm text-gray-500">{{ isEdit ? 'Update department info' : 'Fill details to create department' }}</p>
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn" (click)="onClose()">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden animate-slideUp" (click)="$event.stopPropagation()">
+    
+    <!-- Header with gradient -->
+    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-6 py-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
+            <i-lucide [img]="Building2" class="w-6 h-6 text-white"></i-lucide>
+          </div>
+          <div class="text-white">
+            <h3 class="text-lg font-bold">{{ isEdit ? 'Edit Department' : 'Create Department' }}</h3>
+            <p class="text-sm text-indigo-100">{{ isEdit ? 'Update department information' : 'Fill in the details below' }}</p>
+          </div>
+        </div>
+        <button 
+          (click)="onClose()" 
+          class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+          <i-lucide [img]="X" class="w-5 h-5 text-white"></i-lucide>
+        </button>
       </div>
-      <button (click)="onClose()" class="p-2"><i-lucide [img]="X" class="w-5 h-5"></i-lucide></button>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
-          <label class="block text-sm font-medium mb-1">Name</label>
-          <input formControlName="name" class="w-full p-2 border rounded" />
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="p-8 flex flex-col items-center justify-center">
+      <div class="relative">
+        <div class="w-14 h-14 border-4 border-indigo-200 rounded-full animate-spin border-t-indigo-600"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i-lucide [img]="Building2" class="w-5 h-5 text-indigo-600"></i-lucide>
         </div>
+      </div>
+      <p class="text-gray-500 mt-4 font-medium">Loading department data...</p>
+    </div>
 
+    <!-- Form -->
+    <form *ngIf="!isLoading" [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6">
+      <div class="space-y-5">
+        
+        <!-- Department Name -->
         <div>
-          <label class="block text-sm font-medium mb-1">Department Code <span class="text-xs text-gray-400">(unique short ID, uppercase letters/numbers)</span></label>
-          <input formControlName="code" class="w-full p-2 border rounded" />
-          <p *ngIf="form.get('code')?.invalid && form.get('code')?.touched" class="text-red-500 text-xs mt-1">
-            <span *ngIf="form.get('code')?.errors?.['required']">Department code is required.</span>
-            <span *ngIf="form.get('code')?.errors?.['pattern']">Use uppercase letters, numbers, underscore or hyphen only.</span>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Department Name <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i-lucide [img]="Building2" class="w-5 h-5 text-gray-400"></i-lucide>
+            </div>
+            <input 
+              formControlName="name" 
+              type="text"
+              placeholder="e.g. Human Resources"
+              class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+              [class.border-red-300]="form.get('name')?.invalid && form.get('name')?.touched"
+              [class.focus:ring-red-500]="form.get('name')?.invalid && form.get('name')?.touched" />
+          </div>
+          <p *ngIf="form.get('name')?.invalid && form.get('name')?.touched" 
+             class="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            Department name is required
           </p>
         </div>
 
-        <div class="col-span-2">
-          <label class="block text-sm font-medium mb-1">Description</label>
-          <textarea formControlName="description" class="w-full p-2 border rounded"></textarea>
+        <!-- Department Code -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Department Code <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i-lucide [img]="Hash" class="w-5 h-5 text-gray-400"></i-lucide>
+            </div>
+            <input 
+              formControlName="code" 
+              type="text"
+              placeholder="e.g. HR-DEPT"
+              class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white uppercase"
+              [class.border-red-300]="form.get('code')?.invalid && form.get('code')?.touched"
+              [class.focus:ring-red-500]="form.get('code')?.invalid && form.get('code')?.touched" />
+          </div>
+          <p class="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
+            <i-lucide [img]="Info" class="w-3.5 h-3.5"></i-lucide>
+            Unique ID using uppercase letters, numbers, underscore or hyphen
+          </p>
+          <p *ngIf="form.get('code')?.invalid && form.get('code')?.touched" 
+             class="text-red-500 text-xs mt-1 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <span *ngIf="form.get('code')?.errors?.['required']">Department code is required</span>
+            <span *ngIf="form.get('code')?.errors?.['pattern']">Use uppercase letters, numbers, underscore or hyphen only</span>
+          </p>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Description
+            <span class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <div class="relative">
+            <div class="absolute top-3.5 left-3.5 pointer-events-none">
+              <i-lucide [img]="FileText" class="w-5 h-5 text-gray-400"></i-lucide>
+            </div>
+            <textarea 
+              formControlName="description" 
+              rows="3"
+              placeholder="Brief description of the department's responsibilities..."
+              class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white resize-none">
+            </textarea>
+          </div>
         </div>
       </div>
 
-      <div class="mt-4 flex justify-end gap-2">
-        <button type="button" (click)="onClose()" class="px-4 py-2 border rounded">Cancel</button>
-        <button type="submit" [disabled]="form.invalid || isSubmitting" class="px-4 py-2 bg-indigo-600 text-white rounded">{{ isSubmitting ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}</button>
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="mt-5 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <div class="flex items-start gap-3">
+          <div class="p-1 bg-red-100 rounded-full">
+            <svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-red-800">Error</p>
+            <p class="text-sm text-red-600 mt-0.5">{{ errorMessage }}</p>
+          </div>
+        </div>
       </div>
 
-      <div *ngIf="errorMessage" class="mt-3 text-red-600">{{ errorMessage }}</div>
+      <!-- Footer Actions -->
+      <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-end gap-3">
+        <button 
+          type="button" 
+          (click)="onClose()" 
+          class="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-colors">
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          [disabled]="form.invalid || isSubmitting" 
+          class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 disabled:shadow-none flex items-center gap-2">
+          <div *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span>{{ isSubmitting ? 'Saving...' : (isEdit ? 'Update Department' : 'Create Department') }}</span>
+        </button>
+      </div>
     </form>
   </div>
 </div>

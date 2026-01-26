@@ -396,15 +396,23 @@ export class ManagerDepartmentsService {
   }
 
   async removeEmployees(id: string, dto: RemoveEmployeesDto) {
-    await this.prisma.$transaction(async (tx) => {
-      // Use helper to automatically remove employees and handle manager relationships
-      await this.relationshipsHelper.removeEmployeesFromDepartment(
-        id,
-        dto.employeeIds,
-        tx,
-      );
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // Use helper to automatically remove employees and handle manager relationships
+        await this.relationshipsHelper.removeEmployeesFromDepartment(
+          id,
+          dto.employeeIds,
+          tx,
+        );
+      });
 
-    return { message: 'Đã bỏ gán nhân viên khỏi phòng ban' };
+      return { message: 'Đã bỏ gán nhân viên khỏi phòng ban' };
+    } catch (error: any) {
+      // Re-throw known exceptions
+      if (error.message?.includes('Không thể xóa quản lý phòng ban')) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
   }
 }

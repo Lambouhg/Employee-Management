@@ -70,10 +70,9 @@
   </div>
 </div>
 
-<!-- Employee Form Modal -->
+<!-- Employee Form Modal (only for creating new employees) -->
 <app-employee-form-modal
   *ngIf="showEmployeeForm"
-  [employeeId]="selectedEmployeeId"
   (closed)="closeEmployeeForm()"
   (saved)="onEmployeeSaved()">
 </app-employee-form-modal>

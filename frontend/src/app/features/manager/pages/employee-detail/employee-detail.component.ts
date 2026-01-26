@@ -4,12 +4,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, Mail, Phone, Briefcase, Calendar, Users, Building2, UserCog, Shield, Edit, Trash2, UserCheck, UserX, RefreshCw } from 'lucide-angular';
 import { ManagerService } from '@core/services/manager.service';
 import { Employee } from '@core/models/employee.model';
+import { EmployeeFormModalComponent } from '../../components/employee-form-modal/employee-form-modal.component';
 import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-employee-detail',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, EmployeeFormModalComponent],
   templateUrl: './employee-detail.component.html'
 })
 export class EmployeeDetailComponent implements OnInit {
@@ -22,6 +23,9 @@ export class EmployeeDetailComponent implements OnInit {
   reportingChain: any[] = [];
   isLoading = true;
   error: string | null = null;
+  
+  // Modal state
+  showEmployeeForm = false;
 
   // Icons
   readonly ArrowLeft = ArrowLeft;
@@ -85,10 +89,18 @@ export class EmployeeDetailComponent implements OnInit {
 
   editEmployee(): void {
     if (this.employee) {
-      // Navigate back with edit mode
-      this.router.navigate(['/manager/employees'], { 
-        queryParams: { edit: this.employee.id }
-      });
+      this.showEmployeeForm = true;
+    }
+  }
+
+  closeEmployeeForm(): void {
+    this.showEmployeeForm = false;
+  }
+
+  onEmployeeSaved(): void {
+    // Reload employee data after saving
+    if (this.employee) {
+      this.loadEmployeeDetail(this.employee.id);
     }
   }
 
