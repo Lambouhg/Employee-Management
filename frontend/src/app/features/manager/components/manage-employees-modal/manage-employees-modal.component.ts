@@ -54,6 +54,7 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
     this.currentEmployees = this.department.employees || [];
 
     // Available employees (not in current department)
+    // Note: allEmployees is already filtered to only include employees without departments
     const currentEmployeeIds = new Set(this.currentEmployees.map(emp => emp.id));
     this.availableEmployees = this.allEmployees.filter(emp => !currentEmployeeIds.has(emp.id));
 
@@ -84,7 +85,7 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
     if (this.isDepartmentManager(employeeId)) {
       return;
     }
-    
+
     if (this.selectedToRemove.has(employeeId)) {
       this.selectedToRemove.delete(employeeId);
     } else {
@@ -103,7 +104,7 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
   selectAllToRemove(): void {
     // Filter out department manager
     const removableEmployees = this.currentEmployees.filter(emp => this.canRemoveEmployee(emp.id));
-    
+
     if (this.selectedToRemove.size === removableEmployees.length) {
       this.selectedToRemove.clear();
     } else {

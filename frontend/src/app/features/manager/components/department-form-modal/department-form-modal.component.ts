@@ -13,6 +13,7 @@ import { LucideAngularModule, X, Info, Building2, Hash, FileText } from 'lucide-
 })
 export class DepartmentFormModalComponent implements OnInit {
   @Input() departmentId?: string;
+  @Input() department?: DepartmentDetail;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
 
@@ -34,7 +35,12 @@ export class DepartmentFormModalComponent implements OnInit {
   ngOnInit(): void {
     this.isEdit = !!this.departmentId;
     this.initForm();
-    this.loadData();
+
+    if (this.department) {
+      this.patchForm(this.department);
+    } else {
+      this.loadData();
+    }
   }
 
   initForm() {
@@ -79,7 +85,7 @@ export class DepartmentFormModalComponent implements OnInit {
     this.isSubmitting = true;
 
     const formValue = this.form.value;
-    
+
     // Prepare payload - only name, code, description (NO managerId)
     const payload = {
       name: formValue.name,
@@ -90,16 +96,16 @@ export class DepartmentFormModalComponent implements OnInit {
     if (!this.isEdit) {
       // Create mode
       this.departmentService.create(payload).subscribe({
-        next: () => { 
-          this.isSubmitting = false; 
-          this.saved.emit(); 
-          this.onClose(); 
+        next: () => {
+          this.isSubmitting = false;
+          this.saved.emit();
+          this.onClose();
         },
         error: (err) => {
           console.error('Create error:', err);
           console.error('Error response:', err.error);
           this.isSubmitting = false;
-          
+
           // Handle different error formats
           let errorMsg = 'Lỗi tạo phòng ban';
           if (err.error) {
@@ -117,10 +123,10 @@ export class DepartmentFormModalComponent implements OnInit {
     } else {
       // Edit mode - only update metadata, NOT manager
       this.departmentService.update(this.departmentId!, payload).subscribe({
-        next: () => { 
-          this.isSubmitting = false; 
-          this.saved.emit(); 
-          this.onClose(); 
+        next: () => {
+          this.isSubmitting = false;
+          this.saved.emit();
+          this.onClose();
         },
         error: (err) => {
           console.error('Update error:', err);

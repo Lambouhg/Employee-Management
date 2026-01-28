@@ -25,7 +25,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
   private cdr = inject(ChangeDetectorRef);
 
   form!: FormGroup;
-  managersList: { id: string; fullName: string; email: string }[] = [];
+  managersList: { id: string; fullName: string; email: string; managedDepartment?: { id: string; name: string } | null }[] = [];
   isSubmitting = false;
   isLoadingManagers = false;
   errorMessage: string | null = null;
@@ -82,20 +82,29 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
   loadManagers(): void {
     this.isLoadingManagers = true;
     this.errorMessage = null;
-    
+
     // Use dedicated endpoint for department managers (DEPT_MANAGER only)
     this.managerService.getDepartmentManagers().subscribe({
-      next: (managers) => {
+      next: (managers: any) => {
         if (!managers || managers.length === 0) {
           this.errorMessage = 'Không có quản lý phòng ban nào trong hệ thống';
           this.managersList = [];
           this.isLoadingManagers = false;
           return;
         }
-        this.managersList = managers.map(manager => ({
+
+        // Sort managers: Unassigned first, then by name
+        managers.sort((a: any, b: any) => {
+          if (!a.managedDepartment && b.managedDepartment) return -1;
+          if (a.managedDepartment && !b.managedDepartment) return 1;
+          return a.fullName.localeCompare(b.fullName);
+        });
+
+        this.managersList = managers.map((manager: any) => ({
           id: manager.id,
           fullName: manager.fullName,
-          email: manager.email
+          email: manager.email,
+          managedDepartment: manager.managedDepartment
         }));
         this.errorMessage = null;
         this.isLoadingManagers = false;
@@ -131,6 +140,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
         console.error('Error assigning manager:', err);
         this.errorMessage = err.error?.message || 'Không thể gán quản lý';
         this.isSubmitting = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -150,7 +160,7 @@ export class AssignManagerModalComponent implements OnInit, OnChanges {
   getInitials(name: string): string {
     if (!name) return '?';
     const names = name.split(' ');
-    return names.length > 1 
+    return names.length > 1
       ? names[0][0] + names[names.length - 1][0]
       : names[0][0];
   }

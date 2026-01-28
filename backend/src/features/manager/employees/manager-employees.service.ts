@@ -485,15 +485,20 @@ export class ManagerEmployeesService {
       where: {
         isActive: true,
         role: {
-          name: 'DEPT_MANAGER',
+          name: 'DEPT_MANAGER'
         },
       },
       select: {
         id: true,
         fullName: true,
         email: true,
-        // Removed role and department selects for better performance
-        // These are not needed for the dropdown selection
+        // Include managed department info to show status in UI
+        managedDepartment: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: { fullName: 'asc' },
     });

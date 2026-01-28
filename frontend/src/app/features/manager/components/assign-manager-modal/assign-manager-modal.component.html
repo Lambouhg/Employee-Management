@@ -1,7 +1,7 @@
 <!-- Modal Overlay -->
 <div class="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
   <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl animate-slideUp">
-    
+
     <!-- Header with gradient -->
     <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-6 py-5">
       <div class="flex items-center justify-between">
@@ -14,9 +14,7 @@
             <p class="text-sm text-indigo-100">{{ department?.name || 'Department' }}</p>
           </div>
         </div>
-        <button 
-          (click)="onClose()" 
-          class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+        <button (click)="onClose()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
           <i-lucide [img]="X" class="w-5 h-5 text-white"></i-lucide>
         </button>
       </div>
@@ -24,13 +22,15 @@
 
     <!-- Form Content -->
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6">
-      
+
       <!-- Current Manager Info -->
-      <div *ngIf="department?.manager" class="mb-5 p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-100">
+      <div *ngIf="department?.manager"
+        class="mb-5 p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-100">
         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Current Manager</p>
         <div class="flex items-center gap-3">
           <div class="relative">
-            <div class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+            <div
+              class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
               {{ getInitials(department.manager.fullName) }}
             </div>
             <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -49,42 +49,50 @@
         </label>
         <div class="relative">
           <!-- Loading Overlay -->
-          <div *ngIf="isLoadingManagers" class="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-xl">
+          <div *ngIf="isLoadingManagers"
+            class="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-xl">
             <div class="text-center">
-              <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent"></div>
+              <div
+                class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent">
+              </div>
               <p class="text-xs text-gray-500 mt-2">Loading managers...</p>
             </div>
           </div>
-          
+
           <!-- Select Dropdown -->
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <i-lucide [img]="UserCog" class="w-5 h-5 text-gray-400"></i-lucide>
             </div>
-            <select
-              formControlName="managerId"
+            <select formControlName="managerId"
               class="w-full pl-11 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer"
               [disabled]="isLoadingManagers">
               <option [ngValue]="null">
-                {{ isLoadingManagers ? 'Loading...' : (managersList.length === 0 ? 'No managers available' : '-- Select a manager --') }}
+                {{ isLoadingManagers ? 'Loading...' : (managersList.length === 0 ? 'No managers available' : '-- Select
+                a manager --') }}
               </option>
-              <option *ngFor="let manager of managersList" [ngValue]="manager.id">
-                {{ manager.fullName }} ({{ manager.email }})
+              <option *ngFor="let manager of managersList" [ngValue]="manager.id"
+                [disabled]="manager.managedDepartment && manager.managedDepartment.id !== departmentId">
+                {{ manager.fullName }}
+                {{ manager.managedDepartment ? '(Đang quản lý: ' + manager.managedDepartment.name + ')' : '' }}
               </option>
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
         </div>
-        
+
         <!-- Warning if no managers -->
-        <div *ngIf="!isLoadingManagers && managersList.length === 0" class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+        <div *ngIf="!isLoadingManagers && managersList.length === 0"
+          class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
           <div class="flex items-start gap-2">
             <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              <path fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd" />
             </svg>
             <div>
               <p class="text-sm font-medium text-amber-800">No Department Managers</p>
@@ -102,7 +110,8 @@
           </div>
           <div>
             <p class="text-sm font-medium text-blue-800">Important</p>
-            <p class="text-xs text-blue-600 mt-0.5">All employees in this department will automatically report to the assigned manager.</p>
+            <p class="text-xs text-blue-600 mt-0.5">All employees in this department will automatically report to the
+              assigned manager.</p>
           </div>
         </div>
       </div>
@@ -112,7 +121,9 @@
         <div class="flex items-start gap-3">
           <div class="p-1 bg-red-100 rounded-full">
             <svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              <path fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd" />
             </svg>
           </div>
           <div>
@@ -124,17 +135,14 @@
 
       <!-- Footer Actions -->
       <div class="pt-5 border-t border-gray-100 flex items-center justify-end gap-3">
-        <button 
-          type="button" 
-          (click)="onClose()"
+        <button type="button" (click)="onClose()"
           class="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-colors">
           Cancel
         </button>
-        <button 
-          type="submit"
-          [disabled]="isSubmitting || isLoadingManagers || managersList.length === 0"
+        <button type="submit" [disabled]="isSubmitting || isLoadingManagers || managersList.length === 0"
           class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 disabled:shadow-none flex items-center gap-2">
-          <div *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <div *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin">
+          </div>
           <i-lucide *ngIf="!isSubmitting" [img]="Check" class="w-4 h-4"></i-lucide>
           <span>{{ isSubmitting ? 'Assigning...' : 'Assign Manager' }}</span>
         </button>

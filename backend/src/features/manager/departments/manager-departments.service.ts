@@ -46,23 +46,23 @@ export class ManagerDepartmentsService {
         },
         employees: includeEmployees
           ? {
-              select: {
-                id: true,
-                email: true,
-                fullName: true,
-                phone: true,
-                employmentType: true,
-                isActive: true,
-                role: {
-                  select: {
-                    id: true,
-                    name: true,
-                    displayName: true,
-                    level: true,
-                  },
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              phone: true,
+              employmentType: true,
+              isActive: true,
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  displayName: true,
+                  level: true,
                 },
               },
-            }
+            },
+          }
           : false,
         _count: {
           select: {
@@ -307,78 +307,108 @@ export class ManagerDepartmentsService {
     dto: AssignDepartmentManagerDto,
     currentUser: any,
   ) {
-    // Business rule: DEPT_MANAGER can only manage their own department
-    if (currentUser.role.name === 'DEPT_MANAGER') {
-      const userDepartment = await this.prisma.user.findUnique({
-        where: { id: currentUser.id },
-        select: { departmentId: true },
-      });
+    try {
+      // Business rule: DEPT_MANAGER can only manage their own department
+      if (currentUser.role.name === 'DEPT_MANAGER') {
+        const userDepartment = await this.prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: { departmentId: true },
+        });
 
-      if (!userDepartment?.departmentId || userDepartment.departmentId !== id) {
-        throw new ForbiddenException(
-          'Bạn chỉ có thể quản lý phòng ban của mình',
-        );
+        if (!userDepartment?.departmentId || userDepartment.departmentId !== id) {
+          throw new ForbiddenException(
+            'Bạn chỉ có thể quản lý phòng ban của mình',
+          );
+        }
       }
-    }
 
-    // Validate that the manager being assigned is a DEPT_MANAGER
-    if (dto.managerId) {
-      const managerToAssign = await this.prisma.user.findUnique({
-        where: { id: dto.managerId },
-        select: { role: { select: { level: true, name: true } } },
-      });
-
-      if (!managerToAssign || managerToAssign.role.name !== 'DEPT_MANAGER') {
-        throw new BadRequestException(
-          'Chỉ DEPT_MANAGER mới có thể làm trưởng phòng ban',
-        );
-      }
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Get current department info to handle manager removal
-      const currentDepartment = await tx.department.findUnique({
-        where: { id },
-        select: { managerId: true },
-      });
-
-      // 2. Update department manager
-      const department = await tx.department.update({
-        where: { id },
-        data: {
-          managerId: dto.managerId ?? null,
-        },
-      });
-
-      // 3. Handle manager assignment/removal
+      // Validate that the manager being assigned is a DEPT_MANAGER
       if (dto.managerId) {
-        // Assigning new manager: link manager to this department
-        // Note: DEPT_MANAGER should NOT have a managerId (they are managers themselves)
-        await tx.user.update({
+        const managerToAssign = await this.prisma.user.findUnique({
           where: { id: dto.managerId },
+          select: { role: { select: { level: true, name: true } } },
+        });
+
+        if (!managerToAssign || managerToAssign.role.name !== 'DEPT_MANAGER') {
+          throw new BadRequestException(
+            'Chỉ DEPT_MANAGER mới có thể làm trưởng phòng ban',
+          );
+        }
+      }
+
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Get current department info to handle manager removal
+        const currentDepartment = await tx.department.findUnique({
+          where: { id },
+          select: { managerId: true },
+        });
+
+        // 2. Update department manager
+        const department = await tx.department.update({
+          where: { id },
           data: {
-            departmentId: id,
-            managerId: null, // Ensure DEPT_MANAGER doesn't have a manager
+            managerId: dto.managerId ?? null,
           },
         });
-      } else if (currentDepartment?.managerId) {
-        // Removing manager: unlink old manager from this department
-        await tx.user.update({
-          where: { id: currentDepartment.managerId },
-          data: { departmentId: null },
-        });
+
+        // 3. Handle manager assignment/removal
+        if (dto.managerId) {
+          // Assigning new manager: link manager to this department
+          // Note: DEPT_MANAGER should NOT have a managerId (they are managers themselves)
+          await tx.user.update({
+            where: { id: dto.managerId },
+            data: {
+              departmentId: id,
+              managerId: null, // Ensure DEPT_MANAGER doesn't have a manager
+            },
+          });
+        } else if (currentDepartment?.managerId) {
+          // Removing manager: unlink old manager from this department
+          await tx.user.update({
+            where: { id: currentDepartment.managerId },
+            data: { departmentId: null },
+          });
+        }
+
+        // 4. Automatically update all REGULAR employees' manager relationships
+        //    Only regular employees (not DEPT_MANAGER) will report to the department manager
+        await this.relationshipsHelper.updateEmployeeManagers(
+          id,
+          dto.managerId ?? null,
+          tx,
+        );
+
+        return department;
+      });
+    } catch (error: any) {
+      console.error('Error assigning manager:', error);
+
+      // Handle Prisma unique constraint violation
+      // P2002: Unique constraint failed on the fields: (`"managerId"`)
+      if (error.code === 'P2002') {
+        const target = error.meta?.target;
+        // Check if target contains 'managerId' (array or string depending on DB adapter)
+        if (
+          (Array.isArray(target) && target.includes('managerId')) ||
+          (typeof target === 'string' && target.includes('managerId')) ||
+          error.message?.includes('managerId')
+        ) {
+          throw new BadRequestException(
+            'Người quản lý này đang quản lý một phòng ban khác',
+          );
+        }
       }
 
-      // 4. Automatically update all REGULAR employees' manager relationships
-      //    Only regular employees (not DEPT_MANAGER) will report to the department manager
-      await this.relationshipsHelper.updateEmployeeManagers(
-        id,
-        dto.managerId ?? null,
-        tx,
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error.message || 'Lỗi không xác định khi gán quản lý',
       );
-
-      return department;
-    });
+    }
   }
 
   async assignEmployees(id: string, dto: AssignEmployeesDto) {

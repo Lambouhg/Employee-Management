@@ -27,6 +27,10 @@ export const MANAGER_ROUTES: Routes = [
         loadComponent: () => import('./pages/department-list/department-list.component').then(m => m.DepartmentListComponent)
       },
       {
+        path: 'departments/:id',
+        loadComponent: () => import('./pages/department-detail/department-detail.component').then(m => m.DepartmentDetailComponent)
+      },
+      {
         path: 'approvals/schedules',
         loadComponent: () => import('./pages/approvals/schedule-approval/schedule-approval.component').then(m => m.ScheduleApprovalComponent)
       },

@@ -1,14 +1,15 @@
-import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { DepartmentService } from '@core/services/department.service';
 import { ManagerService } from '@app/core/services/manager.service';
 import { DepartmentFormModalComponent } from '../../components/department-form-modal/department-form-modal.component';
 import { AssignManagerModalComponent } from '../../components/assign-manager-modal/assign-manager-modal.component';
 import { ManageEmployeesModalComponent } from '../../components/manage-employees-modal/manage-employees-modal.component';
-import { Info } from 'lucide-angular';
-import { Department, DepartmentEmployee } from '@core/models/department.model';
+import { Department } from '@core/models/department.model';
 import { Employee } from '@core/models/employee.model';
+import { BehaviorSubject, combineLatest, map, Observable, startWith, switchMap, tap, shareReplay } from 'rxjs';
 import {
   LucideAngularModule,
   Building2,
@@ -29,17 +30,57 @@ import {
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     LucideAngularModule,
     DepartmentFormModalComponent,
     AssignManagerModalComponent,
     ManageEmployeesModalComponent,
   ],
-  templateUrl:'./department-list.component.html',
+  templateUrl: './department-list.component.html',
 })
 export class DepartmentListComponent implements OnInit {
-  public departments: Department[] = [];
+  private departmentService = inject(DepartmentService);
+  private employeeService = inject(ManagerService);
+  private cdr = inject(ChangeDetectorRef);
+
+  // Observables for data
+  private refreshDepartments$ = new BehaviorSubject<void>(undefined);
+  public departments$: Observable<Department[]> = this.refreshDepartments$.pipe(
+    switchMap(() => this.departmentService.getDepartments(true)),
+    shareReplay(1)
+  );
+
+  // Search and Filter Subjects
+  public searchTerm$ = new BehaviorSubject<string>('');
+  public filterStatus$ = new BehaviorSubject<'all' | 'with-manager' | 'without-manager'>('all');
+
+  // Computed filtered departments
+  public filteredDepartments$: Observable<Department[]> = combineLatest([
+    this.departments$,
+    this.searchTerm$,
+    this.filterStatus$
+  ]).pipe(
+    map(([departments, searchTerm, filterStatus]) => {
+      return departments.filter(dept => {
+        const searchMatch = !searchTerm ||
+          dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          dept.code.toLowerCase().includes(searchTerm.toLowerCase());
+
+        let statusMatch = true;
+        if (filterStatus === 'with-manager') {
+          statusMatch = !!dept.manager;
+        } else if (filterStatus === 'without-manager') {
+          statusMatch = !dept.manager;
+        }
+
+        return searchMatch && statusMatch;
+      });
+    })
+  );
+
   public employees: Employee[] = [];
-  public isLoading = true;
+  public isLoading = true; // Still used for initial loading state if needed, or can be handled by async pipe
+
   public readonly Building2 = Building2;
   public readonly Plus = Plus;
   public readonly Edit = Edit;
@@ -51,16 +92,6 @@ export class DepartmentListComponent implements OnInit {
   public readonly MoreVertical = MoreVertical;
   public readonly Users = Users;
 
-  constructor(
-    public departmentService: DepartmentService,
-    private employeeService: ManagerService,
-    private cdr: ChangeDetectorRef
-  ) {}
-
-  // Search and Filter
-  searchTerm = '';
-  filterStatus: 'all' | 'with-manager' | 'without-manager' = 'all';
-
   // Modal states
   showDepartmentForm = false;
   showAssignManager = false;
@@ -69,92 +100,35 @@ export class DepartmentListComponent implements OnInit {
   selectedDepartmentId?: string;
   selectedDepartment?: Department;
 
-  // Cache department managers for faster access
+  // Cache department managers
   departmentManagers: { id: string; fullName: string; email: string }[] = [];
   isLoadingManagers = false;
 
   // Dropdown state
   openDropdownId: string | null = null;
 
-  // Expanded state for department cards
-  private expandedIds = new Set<string>();
-
-  // Filtered departments based on search and filter
-  get filteredDepartments(): Department[] {
-    return this.departments.filter(dept => {
-      // Search filter
-      const searchMatch = !this.searchTerm || 
-        dept.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        dept.code.toLowerCase().includes(this.searchTerm.toLowerCase());
-      
-      // Status filter
-      let statusMatch = true;
-      if (this.filterStatus === 'with-manager') {
-        statusMatch = !!dept.manager;
-      } else if (this.filterStatus === 'without-manager') {
-        statusMatch = !dept.manager;
-      }
-      
-      return searchMatch && statusMatch;
-    });
-  }
-
-  // Statistics methods
-  getTotalEmployees(): number {
-    return this.departments.reduce((sum, dept) => sum + (dept._count?.employees || 0), 0);
-  }
-
-  getDepartmentsWithManager(): number {
-    return this.departments.filter(dept => dept.manager).length;
-  }
-
-  getDepartmentsWithoutManager(): number {
-    return this.departments.filter(dept => !dept.manager).length;
-  }
-
-  trackByDeptId(index: number, dept: Department): string {
-    return dept.id;
-  }
-
   ngOnInit(): void {
-    this.loadDepartments();
+    // We don't need manual loadDepartments anymore as departments$ handles it
+    // But we still need to load employees and managers for modals
     this.loadEmployees();
-    this.loadDepartmentManagers(); // Preload managers for faster modal opening
-  }
+    this.loadDepartmentManagers();
 
-  toggleExpanded(id: string): void {
-    if (this.expandedIds.has(id)) this.expandedIds.delete(id);
-    else this.expandedIds.add(id);
-  }
-
-  isExpanded(id: string): boolean {
-    return this.expandedIds.has(id);
-  }
-
-  loadDepartments(): void {
-    this.isLoading = true;
-    this.departmentService.getDepartments(true).subscribe({
-      next: (departments) => {
-        this.departments = departments;
+    // Track loading state
+    this.departments$.pipe(
+      tap(() => {
         this.isLoading = false;
         this.cdr.markForCheck();
-      },
-      error: (err) => {
-        console.error('Error loading departments:', err);
-        this.isLoading = false;
-        this.cdr.markForCheck();
-      }
-    });
+      })
+    ).subscribe();
   }
 
   loadEmployees(): void {
-    this.employeeService.getAll().subscribe({
+    this.employeeService.getAll({ departmentId: null }).subscribe({
       next: (response) => {
         this.employees = response.data;
+        this.cdr.markForCheck();
       },
-      error: (err) => {
-        console.error('Error loading employees:', err);
-      }
+      error: (err) => console.error('Error loading employees:', err)
     });
   }
 
@@ -168,12 +142,31 @@ export class DepartmentListComponent implements OnInit {
           email: manager.email
         }));
         this.isLoadingManagers = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading department managers:', err);
         this.isLoadingManagers = false;
+        this.cdr.markForCheck();
       }
     });
+  }
+
+  // Statistics Observables
+  public totalEmployees$ = this.departments$.pipe(
+    map(depts => depts.reduce((sum, dept) => sum + (dept._count?.employees || 0), 0))
+  );
+
+  public deptsWithManager$ = this.departments$.pipe(
+    map(depts => depts.filter(dept => dept.manager).length)
+  );
+
+  public deptsWithoutManager$ = this.departments$.pipe(
+    map(depts => depts.filter(dept => !dept.manager).length)
+  );
+
+  trackByDeptId(index: number, dept: Department): string {
+    return dept.id;
   }
 
   openDepartmentForm(deptId?: string): void {
@@ -189,24 +182,24 @@ export class DepartmentListComponent implements OnInit {
 
   onDepartmentSaved(): void {
     this.closeDepartmentForm();
-    this.loadDepartments();
+    this.refreshDepartments$.next();
   }
 
   onManagerAssigned(): void {
     this.closeAssignManager();
-    this.loadDepartments();
+    this.refreshDepartments$.next();
   }
 
   onEmployeesManaged(): void {
     this.closeManageEmployees();
-    this.loadDepartments();
+    this.refreshDepartments$.next();
   }
 
   deleteDepartment(id: string): void {
     this.closeDropdown();
     if (!confirm('Bạn có chắc chắn muốn xóa phòng ban này?')) return;
     this.departmentService.remove(id).subscribe({
-      next: () => this.loadDepartments(),
+      next: () => this.refreshDepartments$.next(),
       error: (err) => alert(err.error?.message || 'Không thể xóa phòng ban')
     });
   }
@@ -252,11 +245,13 @@ export class DepartmentListComponent implements OnInit {
     this.selectedDepartment = undefined;
   }
 
-  getInitials(name: string): string {
-    const names = name.split(' ');
-    return names.length > 1 
-      ? names[0][0] + names[names.length - 1][0]
-      : names[0][0];
+  getInitials(name: string | null | undefined): string {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return (parts[0][0] || '?').toUpperCase();
   }
 
   // Close dropdown when clicking outside

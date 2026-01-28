@@ -2,12 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { 
-  Employee, 
-  EmployeeQueryParams, 
-  CreateEmployeeDto, 
-  UpdateEmployeeDto, 
-  SubordinatesResponse 
+import {
+  Employee,
+  EmployeeQueryParams,
+  CreateEmployeeDto,
+  UpdateEmployeeDto,
+  SubordinatesResponse
 } from '../models/employee.model';
 import { Role, Manager } from '../models/role.model';
 import { Department } from '../models/department.model';
@@ -25,12 +25,14 @@ export class ManagerService {
    */
   getAll(params?: EmployeeQueryParams): Observable<PaginatedResponse<Employee>> {
     let httpParams = new HttpParams();
-    
+
     if (params) {
       Object.keys(params).forEach(key => {
         const value = (params as any)[key];
-        if (value !== undefined && value !== null) {
-          httpParams = httpParams.set(key, value.toString());
+        // Include null values (convert to string 'null' for query params)
+        // Skip only undefined values
+        if (value !== undefined) {
+          httpParams = httpParams.set(key, value === null ? 'null' : value.toString());
         }
       });
     }

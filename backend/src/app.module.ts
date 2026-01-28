@@ -5,6 +5,7 @@ import configuration from './config/configuration';
 import { DatabaseModule } from './common/database/database.module';
 import { AuthModule } from './features/auth/auth.module';
 import { ManagerModule } from './features/manager/manager.module';
+import { DeptManagerModule } from './features/dept-manager/dept-manager.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -19,6 +20,7 @@ import { AppService } from './app.service';
     DatabaseModule,
     AuthModule,
     ManagerModule,
+    DeptManagerModule,
   ],
   controllers: [AppController],
   providers: [
@@ -33,4 +35,4 @@ import { AppService } from './app.service';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
