@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ShiftType } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
@@ -23,39 +23,48 @@ async function main() {
   // 0. CLEAR EXISTING DATA
   // ============================================
   console.log('\n🗑️  Clearing existing data...');
-  
+
   // Xóa các bảng phụ thuộc User trước
   await prisma.activityLog.deleteMany();
   console.log('✅ Cleared activity logs');
-  
+
   await prisma.attendance.deleteMany();
   console.log('✅ Cleared attendances');
-  
+
   await prisma.shift.deleteMany();
   console.log('✅ Cleared shifts');
-  
+
+  await prisma.shiftOpening.deleteMany();
+  console.log('✅ Cleared shift openings');
+
+  await prisma.shiftTemplate.deleteMany();
+  console.log('✅ Cleared shift templates');
+
+  await prisma.deptWeeklyPlan.deleteMany();
+  console.log('✅ Cleared dept weekly plans');
+
   await prisma.workSchedule.deleteMany();
   console.log('✅ Cleared work schedules');
-  
+
   await prisma.leaveRequest.deleteMany();
   console.log('✅ Cleared leave requests');
-  
+
   // Xóa RolePermission
   await prisma.rolePermission.deleteMany();
   console.log('✅ Cleared role permissions');
-  
+
   // Xóa User
   await prisma.user.deleteMany();
   console.log('✅ Cleared users');
-  
+
   // Xóa Department
   await prisma.department.deleteMany();
   console.log('✅ Cleared departments');
-  
+
   // Xóa Permission và Role
   await prisma.permission.deleteMany();
   console.log('✅ Cleared permissions');
-  
+
   await prisma.role.deleteMany();
   console.log('✅ Cleared roles');
 
@@ -63,7 +72,7 @@ async function main() {
   // 1. SEED ROLES
   // ============================================
   console.log('\n📋 Seeding roles...');
-  
+
   const roles: any[] = [
     {
       name: 'MANAGER',
@@ -108,29 +117,34 @@ async function main() {
     { name: 'view_dept_employees', displayName: 'Xem nhân viên trong phòng', resource: 'employee', action: 'read_dept' },
     { name: 'view_team_members', displayName: 'Xem thành viên trong team', resource: 'employee', action: 'read_team' },
     { name: 'view_own_profile', displayName: 'Xem hồ sơ cá nhân', resource: 'employee', action: 'read_own' },
-    
+
     // Schedule permissions
     { name: 'approve_all_schedules', displayName: 'Duyệt lịch toàn công ty', resource: 'schedule', action: 'approve_all' },
     { name: 'approve_dept_schedules_level2', displayName: 'Duyệt lịch trong phòng (cấp 2)', resource: 'schedule', action: 'approve_dept_level2' },
     { name: 'approve_team_schedules_level1', displayName: 'Duyệt lịch trong team (cấp 1)', resource: 'schedule', action: 'approve_team_level1' },
+    { name: 'manage_dept_schedules', displayName: 'Quản lý lịch làm việc phòng ban', resource: 'schedule', action: 'manage_dept' },
     { name: 'lock_all_schedules', displayName: 'Khóa lịch toàn công ty', resource: 'schedule', action: 'lock_all' },
     { name: 'create_schedule', displayName: 'Tạo lịch làm việc', resource: 'schedule', action: 'create' },
     { name: 'view_own_schedule', displayName: 'Xem lịch cá nhân', resource: 'schedule', action: 'read_own' },
-    
+
+    // Plan permissions (Dept Manager)
+    { name: 'manage_dept_plans', displayName: 'Quản lý kế hoạch phòng ban', resource: 'plan', action: 'manage_dept' },
+    { name: 'view_dept_plans', displayName: 'Xem kế hoạch phòng ban', resource: 'plan', action: 'read_dept' },
+
     // Leave permissions
     { name: 'approve_all_leaves', displayName: 'Duyệt nghỉ phép toàn công ty', resource: 'leave', action: 'approve_all' },
     { name: 'approve_dept_leaves', displayName: 'Duyệt nghỉ phép trong phòng', resource: 'leave', action: 'approve_dept' },
     { name: 'create_leave_request', displayName: 'Tạo yêu cầu nghỉ phép', resource: 'leave', action: 'create' },
-    
+
     // Attendance permissions
     { name: 'view_all_attendance', displayName: 'Xem chấm công toàn công ty', resource: 'attendance', action: 'read_all' },
     { name: 'view_dept_attendance', displayName: 'Xem chấm công trong phòng', resource: 'attendance', action: 'read_dept' },
     { name: 'view_team_attendance', displayName: 'Xem chấm công trong team', resource: 'attendance', action: 'read_team' },
     { name: 'check_in_out', displayName: 'Chấm công', resource: 'attendance', action: 'checkin' },
-    
+
     // Department permissions
     { name: 'manage_departments', displayName: 'Quản lý phòng ban', resource: 'department', action: 'manage' },
-    
+
     // Team permissions
     // Team-related permissions removed (system no longer uses teams)
   ];
@@ -183,7 +197,10 @@ async function main() {
           'view_dept_employees',
           // team views removed
           'view_own_profile',
+          'manage_dept_schedules',
           'approve_dept_schedules_level2',
+          'manage_dept_plans',
+          'view_dept_plans',
           // team-level approvals removed
           'create_schedule',
           'view_own_schedule',
@@ -376,7 +393,450 @@ async function main() {
   });
   console.log('✅ Assigned manager to Tech department');
 
+  // ============================================
+  // 7. SEED SHIFT TEMPLATES
+  // ============================================
+  console.log('\n⏰ Seeding shift templates...');
+
+  // Helper function to create time
+  const createTime = (hours: number, minutes: number = 0) => {
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
+
+  // Shift templates for Sales Department
+  const salesShiftTemplates = [
+    {
+      name: 'Ca sáng bán hàng',
+      code: 'MORNING_8_17',
+      departmentId: salesDept!.id,
+      shiftType: ShiftType.MORNING,
+      startTime: createTime(8, 0),
+      endTime: createTime(17, 0),
+      totalHours: 9.0,
+      isActive: true,
+      allowFullTime: true,
+      allowPartTime: true,
+      description: 'Ca làm việc hành chính từ 8h-17h',
+    },
+    {
+      name: 'Ca chiều bán hàng',
+      code: 'AFTERNOON_13_22',
+      departmentId: salesDept!.id,
+      shiftType: ShiftType.AFTERNOON,
+      startTime: createTime(13, 0),
+      endTime: createTime(22, 0),
+      totalHours: 9.0,
+      isActive: true,
+      allowFullTime: true,
+      allowPartTime: true,
+      description: 'Ca làm việc chiều tối',
+    },
+    {
+      name: 'Ca tối',
+      code: 'EVENING_18_22',
+      departmentId: salesDept!.id,
+      shiftType: ShiftType.EVENING,
+      startTime: createTime(18, 0),
+      endTime: createTime(22, 0),
+      totalHours: 4.0,
+      isActive: true,
+      allowFullTime: false,
+      allowPartTime: true,
+      description: 'Ca tối part-time',
+    },
+  ];
+
+  // Shift templates for Tech Department
+  const techShiftTemplates = [
+    {
+      name: 'Ca sáng kỹ thuật',
+      code: 'MORNING_8_17',
+      departmentId: techDept!.id,
+      shiftType: ShiftType.MORNING,
+      startTime: createTime(8, 0),
+      endTime: createTime(17, 0),
+      totalHours: 9.0,
+      isActive: true,
+      allowFullTime: true,
+      allowPartTime: true,
+      description: 'Ca sáng kỹ thuật',
+    },
+    {
+      name: 'Ca chiều kỹ thuật',
+      code: 'AFTERNOON_13_22',
+      departmentId: techDept!.id,
+      shiftType: ShiftType.AFTERNOON,
+      startTime: createTime(13, 0),
+      endTime: createTime(22, 0),
+      totalHours: 9.0,
+      isActive: true,
+      allowFullTime: true,
+      allowPartTime: true,
+      description: 'Ca chiều kỹ thuật',
+    },
+  ];
+
+  // Shift templates for HR Department
+  const hrShiftTemplates = [
+    {
+      name: 'Ca hành chính',
+      code: 'MORNING_8_17',
+      departmentId: hrDept!.id,
+      shiftType: ShiftType.MORNING,
+      startTime: createTime(8, 0),
+      endTime: createTime(17, 0),
+      totalHours: 9.0,
+      isActive: true,
+      allowFullTime: true,
+      allowPartTime: true,
+      description: 'Ca hành chính nhân sự',
+    },
+  ];
+
+  const allShiftTemplates = [...salesShiftTemplates, ...techShiftTemplates, ...hrShiftTemplates];
+
+  for (const template of allShiftTemplates) {
+    await prisma.shiftTemplate.create({
+      data: template as any,
+    });
+  }
+  console.log(`✅ Created ${allShiftTemplates.length} shift templates`);
+
+  // ============================================
+  // 8. SEED PART-TIME EMPLOYEES
+  // ============================================
+  console.log('\n👥 Seeding part-time employees...');
+
+  // Part-time staff for Sales
+  const ptStaff1 = await prisma.user.create({
+    data: {
+      email: 'pt.sales1@company.com',
+      password: hashedPassword,
+      fullName: 'Nguyễn Thị Part-time 1',
+      phone: '0905234567',
+      roleId: staffRole!.id,
+      departmentId: salesDept!.id,
+      managerId: salesManagerUser.id,
+      employmentType: 'PART_TIME',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created PT user: pt.sales1@company.com (password: 123456)');
+
+  const ptStaff2 = await prisma.user.create({
+    data: {
+      email: 'pt.sales2@company.com',
+      password: hashedPassword,
+      fullName: 'Trần Văn Part-time 2',
+      phone: '0906234567',
+      roleId: staffRole!.id,
+      departmentId: salesDept!.id,
+      managerId: salesManagerUser.id,
+      employmentType: 'PART_TIME',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created PT user: pt.sales2@company.com (password: 123456)');
+
+  // Part-time staff for Tech
+  const ptStaff3 = await prisma.user.create({
+    data: {
+      email: 'pt.tech1@company.com',
+      password: hashedPassword,
+      fullName: 'Lê Thị Part-time Tech',
+      phone: '0907234567',
+      roleId: staffRole!.id,
+      departmentId: techDept!.id,
+      managerId: techManagerUser.id,
+      employmentType: 'PART_TIME',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created PT user: pt.tech1@company.com (password: 123456)');
+
+  // ============================================
+  // 9. SEED MORE FULL-TIME EMPLOYEES
+  // ============================================
+  console.log('\n👥 Seeding more full-time employees...');
+
+  // More FT staff for Sales
+  await prisma.user.create({
+    data: {
+      email: 'ft.sales1@company.com',
+      password: hashedPassword,
+      fullName: 'Phạm Văn Full-time Sales 1',
+      phone: '0908234567',
+      roleId: staffRole!.id,
+      departmentId: salesDept!.id,
+      managerId: salesManagerUser.id,
+      employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created FT user: ft.sales1@company.com (password: 123456)');
+
+  await prisma.user.create({
+    data: {
+      email: 'ft.sales2@company.com',
+      password: hashedPassword,
+      fullName: 'Hoàng Thị Full-time Sales 2',
+      phone: '0909234567',
+      roleId: staffRole!.id,
+      departmentId: salesDept!.id,
+      managerId: salesManagerUser.id,
+      employmentType: 'FULL_TIME',
+      fixedDayOff: 'MONDAY',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created FT user: ft.sales2@company.com (password: 123456)');
+
+  // More FT staff for Tech
+  await prisma.user.create({
+    data: {
+      email: 'ft.tech1@company.com',
+      password: hashedPassword,
+      fullName: 'Đỗ Văn Full-time Tech 1',
+      phone: '0910234567',
+      roleId: staffRole!.id,
+      departmentId: techDept!.id,
+      managerId: techManagerUser.id,
+      employmentType: 'FULL_TIME',
+      fixedDayOff: 'SUNDAY',
+      isActive: true,
+    },
+  });
+  console.log('✅ Created FT user: ft.tech1@company.com (password: 123456)');
+
+  // ============================================
+  // 10. SEED SAMPLE DATA FOR THIS WEEK (Feb 2-8, 2026)
+  // ============================================
+  console.log('\n📅 Seeding sample data for this week (Feb 2-8, 2026)...');
+
+  // Get users for sample data
+  const salesManager = await prisma.user.findUnique({
+    where: { email: 'sales.manager@company.com' },
+  });
+  const ftSales1 = await prisma.user.findUnique({
+    where: { email: 'ft.sales1@company.com' },
+  });
+  const ftSales2 = await prisma.user.findUnique({
+    where: { email: 'ft.sales2@company.com' },
+  });
+  const ptSales1 = await prisma.user.findUnique({
+    where: { email: 'pt.sales1@company.com' },
+  });
+
+  // Get shift templates for Sales department
+  const morningTemplate = await prisma.shiftTemplate.findFirst({
+    where: {
+      departmentId: salesDept!.id,
+      shiftType: 'MORNING',
+    },
+  });
+  const afternoonTemplate = await prisma.shiftTemplate.findFirst({
+    where: {
+      departmentId: salesDept!.id,
+      shiftType: 'AFTERNOON',
+    },
+  });
+
+  // Week start date: Monday Feb 2, 2026
+  const weekStart = new Date('2026-02-02');
+
+  // 1. Create Department Weekly Plan for Sales
+  const weeklyPlan = await prisma.deptWeeklyPlan.create({
+    data: {
+      departmentId: salesDept!.id,
+      weekStartDate: weekStart,
+      status: 'PUBLISHED',
+    },
+  });
+  console.log('✅ Created weekly plan for Sales department');
+
+  // 2. Create Shift Openings for the week
+  const shiftOpenings: any[] = [];
+  const daysOfWeek = [
+    { date: '2026-02-02', day: 'Monday' },
+    { date: '2026-02-03', day: 'Tuesday' },
+    { date: '2026-02-04', day: 'Wednesday' },
+    { date: '2026-02-05', day: 'Thursday' },
+    { date: '2026-02-06', day: 'Friday' },
+    { date: '2026-02-07', day: 'Saturday' },
+  ];
+
+  for (const { date, day } of daysOfWeek) {
+    // Morning shift (8:00-12:00)
+    const morningOpening = await prisma.shiftOpening.create({
+      data: {
+        planId: weeklyPlan.id,
+        templateId: morningTemplate!.id,
+        date: new Date(date),
+        shiftType: 'MORNING',
+        startTime: new Date('1970-01-01T08:00:00Z'),
+        endTime: new Date('1970-01-01T12:00:00Z'),
+        isFTEnabled: true,
+        ftAutoAssigned: true,
+        isPTEnabled: true,
+        ptCapacity: 2,
+        notes: `${day} morning shift`,
+      },
+    });
+    shiftOpenings.push(morningOpening);
+
+    // Afternoon shift (13:00-17:00)
+    const afternoonOpening = await prisma.shiftOpening.create({
+      data: {
+        planId: weeklyPlan.id,
+        templateId: afternoonTemplate!.id,
+        date: new Date(date),
+        shiftType: 'AFTERNOON',
+        startTime: new Date('1970-01-01T13:00:00Z'),
+        endTime: new Date('1970-01-01T17:00:00Z'),
+        isFTEnabled: true,
+        ftAutoAssigned: true,
+        isPTEnabled: true,
+        ptCapacity: 2,
+        notes: `${day} afternoon shift`,
+      },
+    });
+    shiftOpenings.push(afternoonOpening);
+  }
+  console.log(`✅ Created ${shiftOpenings.length} shift openings for the week`);
+
+  // 3. Create Work Schedules and assign Shifts for FT employees
+  // FT Sales 1 (fixed day off: SUNDAY)
+  const ftSales1Schedule = await prisma.workSchedule.create({
+    data: {
+      employeeId: ftSales1!.id,
+      weekStartDate: weekStart,
+      status: 'APPROVED',
+      approvedById: salesManager!.id,
+      approvedAt: new Date(),
+      submittedAt: new Date('2026-01-26'), // Submitted 1 week before
+    },
+  });
+
+  // Create shifts for FT Sales 1 (Morning shifts Mon-Sat)
+  for (let i = 0; i < 6; i++) {
+    const shiftDate = new Date('2026-02-02');
+    shiftDate.setDate(shiftDate.getDate() + i);
+    await prisma.shift.create({
+      data: {
+        scheduleId: ftSales1Schedule.id,
+        employeeId: ftSales1!.id,
+        openingId: shiftOpenings[i * 2].id, // Morning shifts (even indices)
+        date: shiftDate,
+        shiftType: 'MORNING',
+        startTime: new Date('1970-01-01T08:00:00Z'),
+        endTime: new Date('1970-01-01T12:00:00Z'),
+        isAutoGenerated: true,
+      },
+    });
+  }
+  console.log('✅ Created work schedule and shifts for ft.sales1@company.com');
+
+  // FT Sales 2 (fixed day off: MONDAY) - has afternoon shifts
+  const ftSales2Schedule = await prisma.workSchedule.create({
+    data: {
+      employeeId: ftSales2!.id,
+      weekStartDate: weekStart,
+      status: 'APPROVED',
+      approvedById: salesManager!.id,
+      approvedAt: new Date(),
+      submittedAt: new Date('2026-01-26'),
+    },
+  });
+
+  // Create shifts for FT Sales 2 (Afternoon shifts Tue-Sat, skip Monday)
+  for (let i = 1; i < 6; i++) {
+    const shiftDate = new Date('2026-02-02');
+    shiftDate.setDate(shiftDate.getDate() + i);
+    await prisma.shift.create({
+      data: {
+        scheduleId: ftSales2Schedule.id,
+        employeeId: ftSales2!.id,
+        openingId: shiftOpenings[i * 2 + 1].id, // Afternoon shifts (odd indices)
+        date: shiftDate,
+        shiftType: 'AFTERNOON',
+        startTime: new Date('1970-01-01T13:00:00Z'),
+        endTime: new Date('1970-01-01T17:00:00Z'),
+        isAutoGenerated: true,
+      },
+    });
+  }
+  console.log('✅ Created work schedule and shifts for ft.sales2@company.com');
+
+  // 4. Create PT employee schedule with some shifts
+  const ptSales1Schedule = await prisma.workSchedule.create({
+    data: {
+      employeeId: ptSales1!.id,
+      weekStartDate: weekStart,
+      status: 'APPROVED',
+      approvedById: salesManager!.id,
+      approvedAt: new Date(),
+      submittedAt: new Date('2026-01-26'),
+    },
+  });
+
+  // PT works 5 shifts: Mon afternoon, Tue morning, Wed afternoon, Thu morning, Fri afternoon
+  const ptShiftIndices = [1, 2, 5, 6, 9]; // Afternoon-Morning-Afternoon-Morning-Afternoon pattern
+  for (let i = 0; i < ptShiftIndices.length; i++) {
+    const openingIndex = ptShiftIndices[i];
+    const opening = shiftOpenings[openingIndex];
+    const shiftDate = new Date(opening.date);
+
+    await prisma.shift.create({
+      data: {
+        scheduleId: ptSales1Schedule.id,
+        employeeId: ptSales1!.id,
+        openingId: opening.id,
+        date: shiftDate,
+        shiftType: opening.shiftType,
+        startTime: opening.startTime,
+        endTime: opening.endTime,
+        isAutoGenerated: false,
+      },
+    });
+  }
+  console.log('✅ Created work schedule and 5 shifts for pt.sales1@company.com');
+
+  // 5. Create a sample Leave Request (PENDING)
+  await prisma.leaveRequest.create({
+    data: {
+      employeeId: ptSales1!.id,
+      leaveType: 'PERSONAL',
+      startDate: new Date('2026-02-10'), // Next Monday (no conflict with current week)
+      endDate: new Date('2026-02-11'), // 2 days
+      reason: 'Cần xử lý việc cá nhân',
+      status: 'PENDING',
+    },
+  });
+  console.log('✅ Created sample leave request for pt.sales1@company.com');
+
+  // 6. Update PT registered count for openings
+  for (const opening of shiftOpenings) {
+    const registeredCount = await prisma.shift.count({
+      where: {
+        openingId: opening.id,
+        employee: { employmentType: 'PART_TIME' },
+      },
+    });
+    
+    await prisma.shiftOpening.update({
+      where: { id: opening.id },
+      data: { ptRegistered: registeredCount },
+    });
+  }
+  console.log('✅ Updated PT registered counts for shift openings');
+
   console.log('\n✨ Seed completed successfully!');
+  console.log('📊 Sample data created for week Feb 2-8, 2026');
+  console.log('👉 Login as sales.manager@company.com to manage the department');
+  console.log('👉 Login as ft.sales1@company.com or pt.sales1@company.com to test employee features');
 }
 
 main()

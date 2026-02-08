@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://employee-management-1-qhym.onrender.com', // Production API URL
+  apiUrl: 'http://localhost:3000', // Production API URL
   apiTimeout: 30000
 };

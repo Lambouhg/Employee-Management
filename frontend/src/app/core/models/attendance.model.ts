@@ -76,3 +76,76 @@ export interface AttendanceReport {
   totalMinutes: number;
   attendanceRate: number; // percentage
 }
+
+// ============ Staff Attendance Models ============
+
+export enum ShiftType {
+  MORNING = 'MORNING',
+  AFTERNOON = 'AFTERNOON',
+  EVENING = 'EVENING',
+  NIGHT = 'NIGHT'
+}
+
+export interface ShiftInfo {
+  id: string;
+  date: string;
+  shiftType: ShiftType;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+}
+
+export interface AttendanceInfo {
+  id: string;
+  checkInTime: string | null;
+  status: AttendanceStatus;
+  notes?: string;
+  canCheckIn: boolean;
+  message?: string;
+}
+
+export interface TodayAttendance {
+  hasShift: boolean;
+  shift?: ShiftInfo;
+  attendance?: AttendanceInfo;
+  canCheckIn: boolean;
+  message?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  shiftId: string;
+  employeeId: string;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  totalMinutes: number | null;
+  status: AttendanceStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shift: {
+    date: string;
+    shiftType: ShiftType;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+export interface AttendanceHistory {
+  data: AttendanceRecord[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface CheckInRequest {
+  notes?: string;
+}
+
+export interface GetHistoryParams {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}

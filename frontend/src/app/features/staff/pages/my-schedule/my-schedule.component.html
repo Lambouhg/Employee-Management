@@ -1,0 +1,66 @@
+<div class="my-schedule-page">
+    <div class="page-header">
+        <div>
+            <h1>Lịch làm việc của tôi</h1>
+            <p class="subtitle">Xem lịch làm việc được phân công</p>
+        </div>
+        <button class="btn btn-primary" (click)="loadSchedules()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+        </button>
+    </div>
+
+    @if (loading()) {
+    <div class="loading">
+        <i class="fas fa-spinner fa-spin"></i> Đang tải...
+    </div>
+    } @else if (schedules().length === 0) {
+    <div class="no-data">
+        <i class="fas fa-calendar-times"></i>
+        <p>Chưa có lịch làm việc nào</p>
+        <p class="hint">Vui lòng đăng ký ca làm hoặc chờ quản lý phân công</p>
+    </div>
+    } @else {
+    <div class="schedules-list">
+        @for (schedule of schedules(); track schedule.id) {
+        <div class="schedule-card">
+            <div class="schedule-header">
+                <div class="week-info">
+                    <i class="fas fa-calendar-week"></i>
+                    <div>
+                        <strong>Tuần {{ getWeekRange(schedule.weekStartDate) }}</strong>
+                        <div class="shift-count">{{ schedule.shifts.length }} ca làm việc</div>
+                    </div>
+                </div>
+                <span [class]="'badge ' + getStatusClass(schedule.status)">
+                    {{ getStatusName(schedule.status) }}
+                </span>
+            </div>
+
+            <div class="shifts-list">
+                @for (shift of schedule.shifts; track shift.id) {
+                <div class="shift-item">
+                    <div class="shift-date">
+                        <i class="fas fa-calendar-day"></i>
+                        {{ formatDate(shift.date) }}
+                    </div>
+                    <div class="shift-type">
+                        {{ getShiftTypeName(shift.shiftType) }}
+                    </div>
+                    <div class="shift-time">
+                        <i class="fas fa-clock"></i>
+                        {{ formatTime(shift.startTime) }} - {{ formatTime(shift.endTime) }}
+                    </div>
+                    @if (shift.notes) {
+                    <div class="shift-notes">
+                        <i class="fas fa-sticky-note"></i>
+                        {{ shift.notes }}
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>

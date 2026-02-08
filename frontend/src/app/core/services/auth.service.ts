@@ -10,7 +10,13 @@ import {
   RefreshTokenResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
-  LogoutResponse
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  LogoutResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse
 } from '@core/models/auth.model';
 import { environment } from '../../../environments/environment';
 
@@ -75,23 +81,32 @@ export class AuthService {
         this.currentUserSubject.next(user);
       }),
       catchError(error => {
-        // If getMe fails, try to refresh token
-        if (error.status === 401) {
-          return this.refreshToken().pipe(
-            switchMap(() => this.http.get<User>(`${this.API_URL}/auth/me`)),
-            tap(user => {
-              localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-              this.currentUserSubject.next(user);
-            })
-          );
-        }
+        console.error('Error refreshing user:', error);
         return throwError(() => error);
+      })
+    );
+  }
+
+  updateProfile(data: UpdateProfileRequest): Observable<UpdateProfileResponse> {
+    return this.http.patch<UpdateProfileResponse>(`${this.API_URL}/auth/profile`, data).pipe(
+      tap(user => {
+        // Update user in storage and subject
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        this.currentUserSubject.next(user);
       })
     );
   }
 
   changePassword(request: ChangePasswordRequest): Observable<ChangePasswordResponse> {
     return this.http.patch<ChangePasswordResponse>(`${this.API_URL}/auth/change-password`, request);
+  }
+
+  forgotPassword(request: ForgotPasswordRequest): Observable<ForgotPasswordResponse> {
+    return this.http.post<ForgotPasswordResponse>(`${this.API_URL}/auth/forgot-password`, request);
+  }
+
+  resetPassword(request: ResetPasswordRequest): Observable<ResetPasswordResponse> {
+    return this.http.post<ResetPasswordResponse>(`${this.API_URL}/auth/reset-password`, request);
   }
 
   logout(): void {

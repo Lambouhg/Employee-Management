@@ -1,0 +1,186 @@
+<div class="attendance-page">
+    <div class="page-header">
+        <h1>Điểm danh ca làm việc</h1>
+        <div class="current-time">
+            <i class="fas fa-clock"></i>
+            {{ currentTime() | date:'HH:mm:ss - dd/MM/yyyy':'vi-VN' }}
+        </div>
+    </div>
+
+    <!-- Today's Attendance Section -->
+    <div class="today-section">
+        <h2>Ca làm hôm nay</h2>
+
+        @if (loading()) {
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+        } @else if (todayAttendance()) {
+        <div class="attendance-card">
+            @if (!todayAttendance()!.hasShift) {
+            <div class="no-shift">
+                <i class="fas fa-calendar-times"></i>
+                <p>{{ todayAttendance()!.message }}</p>
+            </div>
+            } @else {
+            <div class="shift-info">
+                <div class="shift-header">
+                    <div class="shift-type">
+                        <i class="fas fa-briefcase"></i>
+                        <strong>{{ getShiftTypeName(todayAttendance()!.shift!.shiftType) }}</strong>
+                    </div>
+                    <div class="shift-time">
+                        <i class="fas fa-clock"></i>
+                        {{ formatTime(todayAttendance()!.shift!.startTime) }}
+                        -
+                        {{ formatTime(todayAttendance()!.shift!.endTime) }}
+                    </div>
+                </div>
+
+                @if (todayAttendance()!.shift!.notes) {
+                <div class="shift-notes">
+                    <i class="fas fa-info-circle"></i>
+                    {{ todayAttendance()!.shift!.notes }}
+                </div>
+                }
+
+                <!-- Nếu đã điểm danh -->
+                @if (todayAttendance()!.attendance) {
+                <div class="attendance-status">
+                    <div class="status-checked">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Đã điểm danh</span>
+                    </div>
+                    <div class="check-info">
+                        <div class="check-time">
+                            <strong>Thời gian:</strong>
+                            {{ formatDateTime(todayAttendance()!.attendance!.checkInTime!) }}
+                        </div>
+                        <div class="check-status">
+                            <strong>Trạng thái:</strong>
+                            <span [class]="'badge ' + getStatusClass(todayAttendance()!.attendance!.status)">
+                                {{ getStatusName(todayAttendance()!.attendance!.status) }}
+                            </span>
+                        </div>
+                        @if (todayAttendance()!.attendance!.notes) {
+                        <div class="check-notes">
+                            <strong>Ghi chú:</strong> {{ todayAttendance()!.attendance!.notes }}
+                        </div>
+                        }
+                    </div>
+                </div>
+                }
+
+                <!-- Nếu chưa điểm danh -->
+                @else {
+                <div class="check-in-section">
+                    <div class="check-message" [class.can-check]="todayAttendance()!.canCheckIn"
+                        [class.cannot-check]="!todayAttendance()!.canCheckIn">
+                        <i [class]="todayAttendance()!.canCheckIn ? 'fas fa-info-circle' : 'fas fa-exclamation-triangle'"></i>
+                        {{ todayAttendance()!.message }}
+                    </div>
+
+                    @if (todayAttendance()!.canCheckIn) {
+                    <div class="check-form">
+                        <div class="form-group">
+                            <label for="checkInNotes">Ghi chú (tùy chọn)</label>
+                            <textarea id="checkInNotes" [(ngModel)]="checkInNotes" rows="3"
+                                placeholder="Nhập ghi chú nếu có..."></textarea>
+                        </div>
+                        <button class="btn btn-primary btn-check-in" (click)="onCheckIn()"
+                            [disabled]="checkingIn()">
+                            @if (checkingIn()) {
+                            <i class="fas fa-spinner fa-spin"></i> Đang xử lý...
+                            } @else {
+                            <i class="fas fa-fingerprint"></i> Điểm danh
+                            }
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+        }
+    </div>
+
+    <!-- History Section -->
+    <div class="history-section">
+        <h2>Lịch sử điểm danh</h2>
+
+        @if (attendanceHistory()) {
+        @if (attendanceHistory()!.data.length === 0) {
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>Chưa có lịch sử điểm danh</p>
+        </div>
+        } @else {
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Ca làm</th>
+                        <th>Giờ ca</th>
+                        <th>Giờ điểm danh</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (record of attendanceHistory()!.data; track record.id) {
+                    <tr>
+                        <td>{{ formatDate(record.shift.date) }}</td>
+                        <td>{{ getShiftTypeName(record.shift.shiftType) }}</td>
+                        <td>
+                            {{ formatTime(record.shift.startTime) }}
+                            -
+                            {{ formatTime(record.shift.endTime) }}
+                        </td>
+                        <td>
+                            @if (record.checkInTime) {
+                            {{ formatDateTime(record.checkInTime) }}
+                            } @else {
+                            <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            <span [class]="'badge ' + getStatusClass(record.status)">
+                                {{ getStatusName(record.status) }}
+                            </span>
+                        </td>
+                        <td>
+                            @if (record.notes) {
+                            {{ record.notes }}
+                            } @else {
+                            <span class="text-muted">-</span>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (attendanceHistory()!.totalPages > 1) {
+        <div class="pagination">
+            <button class="btn-page" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            @for (page of pages; track page) {
+            <button class="btn-page" [class.active]="page === currentPage" (click)="goToPage(page)">
+                {{ page }}
+            </button>
+            }
+            <button class="btn-page" [disabled]="currentPage === attendanceHistory()!.totalPages"
+                (click)="goToPage(currentPage + 1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        }
+        }
+        }
+    </div>
+</div>

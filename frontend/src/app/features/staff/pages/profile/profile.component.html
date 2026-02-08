@@ -1,0 +1,137 @@
+<div class="profile-page">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>Hồ sơ cá nhân</h1>
+            <p class="subtitle">Xem và cập nhật thông tin cá nhân của bạn</p>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    @if (loading()) {
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Đang tải thông tin...</p>
+    </div>
+    }
+
+    <!-- Profile Content -->
+    @if (!loading() && user()) {
+    <div class="profile-content">
+        <!-- Read-only Information Card -->
+        <div class="info-card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i>
+                <h2>Thông tin tài khoản</h2>
+            </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Email</label>
+                    <p>{{user()!.email}}</p>
+                </div>
+                <div class="info-item">
+                    <label>Vai trò</label>
+                    <p>{{getRoleDisplay()}}</p>
+                </div>
+                <div class="info-item">
+                    <label>Phòng ban</label>
+                    <p>{{getDepartmentDisplay()}}</p>
+                </div>
+                <div class="info-item">
+                    <label>Loại hợp đồng</label>
+                    <p>{{getEmploymentTypeDisplay()}}</p>
+                </div>
+                @if (user()!.manager) {
+                <div class="info-item">
+                    <label>Quản lý trực tiếp</label>
+                    <p>{{user()!.manager!.fullName}}</p>
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- Editable Profile Form -->
+        <div class="form-card">
+            <div class="card-header">
+                <i class="fas fa-user-edit"></i>
+                <h2>Cập nhật thông tin</h2>
+            </div>
+
+            <!-- Success Message -->
+            @if (successMessage()) {
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                {{successMessage()}}
+            </div>
+            }
+
+            <!-- Error Message -->
+            @if (errorMessage()) {
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i>
+                {{errorMessage()}}
+            </div>
+            }
+
+            <form [formGroup]="profileForm" (ngSubmit)="onSubmit()">
+                <!-- Full Name -->
+                <div class="form-group">
+                    <label for="fullName">Họ và tên <span class="required">*</span></label>
+                    <input 
+                        id="fullName"
+                        type="text" 
+                        class="form-control"
+                        [class.error]="profileForm.get('fullName')?.invalid && profileForm.get('fullName')?.touched"
+                        formControlName="fullName"
+                        placeholder="Nhập họ và tên"
+                    />
+                    @if (getErrorMessage('fullName')) {
+                    <span class="error-message">{{getErrorMessage('fullName')}}</span>
+                    }
+                </div>
+
+                <!-- Phone -->
+                <div class="form-group">
+                    <label for="phone">Số điện thoại</label>
+                    <input 
+                        id="phone"
+                        type="tel" 
+                        class="form-control"
+                        [class.error]="profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched"
+                        formControlName="phone"
+                        placeholder="VD: 0901234567"
+                    />
+                    @if (getErrorMessage('phone')) {
+                    <span class="error-message">{{getErrorMessage('phone')}}</span>
+                    }
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button 
+                        type="button" 
+                        class="btn btn-secondary"
+                        (click)="resetForm()"
+                        [disabled]="saving()"
+                    >
+                        <i class="fas fa-undo"></i> Hủy bỏ
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="btn btn-primary"
+                        [disabled]="profileForm.invalid || saving()"
+                    >
+                        @if (saving()) {
+                        <span class="spinner-small"></span>
+                        Đang lưu...
+                        } @else {
+                        <i class="fas fa-save"></i>
+                        Lưu thay đổi
+                        }
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    }
+</div>

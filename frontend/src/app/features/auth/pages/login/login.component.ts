@@ -1,13 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
@@ -43,7 +43,7 @@ export class LoginComponent {
       next: (response) => {
         console.log('Login successful', response.user);
         this.isLoading = false;
-        
+
         // Redirect based on return URL or role
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || this.getDefaultRoute(response.user.role.name);
         this.router.navigate([returnUrl]);
@@ -68,7 +68,7 @@ export class LoginComponent {
       case 'MANAGER':
         return '/manager';
       case 'DEPT_MANAGER':
-        return '/manager'; // Department managers cũng dùng manager dashboard
+        return '/dept-manager';
       case 'STAFF':
         return '/staff';
       default:

@@ -30,7 +30,12 @@
 
       <!-- Password Field -->
       <div class="form-group">
-        <label for="password">Mật khẩu</label>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <label for="password">Mật khẩu</label>
+          <a routerLink="/auth/forgot-password" style="font-size: 0.875rem; color: #2563eb; text-decoration: none; font-weight: 500;">
+            Quên mật khẩu?
+          </a>
+        </div>
         <input
           id="password"
           type="password"

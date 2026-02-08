@@ -103,3 +103,7 @@ export interface SubordinatesResponse {
   subordinates: Employee[];
   count: number;
 }
+export interface EmployeeSelectionItem {
+  id: string;
+  fullName: string;
+}

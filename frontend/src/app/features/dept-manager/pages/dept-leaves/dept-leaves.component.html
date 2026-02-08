@@ -1,0 +1,196 @@
+<div class="dept-leaves-page">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>Quản lý nghỉ phép</h1>
+            <p class="subtitle">Duyệt và quản lý yêu cầu nghỉ phép của nhân viên</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card pending">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{stats()!.leaveStats.pendingRequests}}</div>
+                <div class="stat-label">Chờ duyệt</div>
+            </div>
+        </div>
+        <div class="stat-card approved">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{stats()!.leaveStats.approvedThisYear}}</div>
+                <div class="stat-label">Đã duyệt (năm nay)</div>
+            </div>
+        </div>
+        <div class="stat-card rejected">
+            <div class="stat-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{stats()!.leaveStats.rejectedThisYear}}</div>
+                <div class="stat-label">Từ chối (năm nay)</div>
+            </div>
+        </div>
+        <div class="stat-card month">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{stats()!.leaveStats.requestsThisMonth}}</div>
+                <div class="stat-label">Yêu cầu tháng này</div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Filters -->
+    <div class="filters-card">
+        <div class="filter-group">
+            <label>Trạng thái:</label>
+            <div class="filter-buttons">
+                <button 
+                    class="filter-btn"
+                    [class.active]="selectedStatus === 'ALL'"
+                    (click)="filterByStatus('ALL')">
+                    Tất cả
+                </button>
+                <button 
+                    class="filter-btn"
+                    [class.active]="selectedStatus === 'PENDING'"
+                    (click)="filterByStatus('PENDING')">
+                    <i class="fas fa-clock"></i> Chờ duyệt
+                </button>
+                <button 
+                    class="filter-btn"
+                    [class.active]="selectedStatus === 'APPROVED'"
+                    (click)="filterByStatus('APPROVED')">
+                    <i class="fas fa-check"></i> Đã duyệt
+                </button>
+                <button 
+                    class="filter-btn"
+                    [class.active]="selectedStatus === 'REJECTED'"
+                    (click)="filterByStatus('REJECTED')">
+                    <i class="fas fa-times"></i> Từ chối
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    @if (loading()) {
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Đang tải danh sách...</p>
+    </div>
+    }
+
+    <!-- Leave Requests Table -->
+    @if (!loading() && leaveRequests()) {
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Danh sách yêu cầu nghỉ phép</h3>
+            <span class="record-count">
+                Tổng: {{leaveRequests()!.total}} yêu cầu
+            </span>
+        </div>
+
+        @if (leaveRequests()!.data.length === 0) {
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>Không có yêu cầu nghỉ phép nào</p>
+        </div>
+        } @else {
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nhân viên</th>
+                        <th>Loại phép</th>
+                        <th>Từ ngày</th>
+                        <th>Đến ngày</th>
+                        <th>Số ngày</th>
+                        <th>Lý do</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (leave of leaveRequests()!.data; track leave.id) {
+                    <tr>
+                        <td>
+                            <div class="employee-info">
+                                <div class="employee-name">{{leave.employee.fullName}}</div>
+                                <div class="employee-email">{{leave.employee.email}}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="leave-type">{{getLeaveTypeText(leave.leaveType)}}</span>
+                        </td>
+                        <td>{{formatDate(leave.startDate)}}</td>
+                        <td>{{formatDate(leave.endDate)}}</td>
+                        <td>
+                            <span class="day-count">
+                                {{calculateDays(leave.startDate, leave.endDate)}} ngày
+                            </span>
+                        </td>
+                        <td>
+                            <div class="reason-text">{{leave.reason}}</div>
+                        </td>
+                        <td>
+                            <span class="status-badge" [ngClass]="getStatusClass(leave.status)">
+                                {{getStatusText(leave.status)}}
+                            </span>
+                        </td>
+                        <td>{{formatDate(leave.createdAt)}}</td>
+                        <td>
+                            <button 
+                                class="btn-view"
+                                (click)="viewDetail(leave)"
+                                title="Xem chi tiết">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (leaveRequests()!.totalPages > 1) {
+        <div class="pagination">
+            <button 
+                class="page-btn"
+                [disabled]="currentPage === 1"
+                (click)="goToPage(currentPage - 1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            @for (page of getPaginationRange(); track page) {
+            <button 
+                class="page-btn"
+                [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+                {{page}}
+            </button>
+            }
+            
+            <button 
+                class="page-btn"
+                [disabled]="currentPage === leaveRequests()!.totalPages"
+                (click)="goToPage(currentPage + 1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        }
+        }
+    </div>
+    }
+</div>

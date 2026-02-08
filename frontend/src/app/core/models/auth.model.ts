@@ -69,9 +69,33 @@ export interface ChangePasswordResponse {
   message: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
 export interface LogoutResponse {
   message: string;
 }
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  phone?: string;
+}
+
+export interface UpdateProfileResponse extends User {}
 
 export interface AuthState {
   user: User | null;

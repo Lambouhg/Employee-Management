@@ -1,0 +1,142 @@
+<div class="max-w-7xl mx-auto p-6">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Ca làm việc có sẵn</h1>
+    <p class="text-gray-600">Chọn ca làm việc để đăng ký. Yêu cầu sẽ được gửi đến quản lý phê duyệt.</p>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="errorMessage" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+    </svg>
+    {{ errorMessage }}
+  </div>
+  <div *ngIf="successMessage" class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+    </svg>
+    {{ successMessage }}
+  </div>
+
+  <!-- Week Selector -->
+  <div class="mb-6 bg-white rounded-lg shadow p-4 flex items-center justify-between">
+    <button
+      (click)="previousWeek()"
+      class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+    
+    <div class="text-center">
+      <div class="text-lg font-bold text-gray-900">
+        Tuần {{ selectedWeekStart | date: 'dd/MM/yyyy' }}
+      </div>
+      <div class="text-sm text-gray-600 mt-1">
+        {{ selectedWeekStart | date: 'dd/MM' }} - {{ getWeekDays()[6] | date: 'dd/MM/yyyy' }}
+      </div>
+    </div>
+
+    <button
+      (click)="nextWeek()"
+      class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Weekly Calendar View -->
+  <div *ngIf="shifts$ | async as shifts" class="bg-white rounded-lg shadow overflow-hidden">
+    <!-- Calendar Header -->
+    <div class="grid grid-cols-7 border-b bg-gray-50">
+      <div *ngFor="let day of getWeekDays(); let i = index" 
+           class="p-3 text-center border-r last:border-r-0">
+        <div class="text-xs font-semibold text-gray-600 uppercase">
+          {{ ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][i] }}
+        </div>
+        <div class="text-sm font-bold text-gray-900 mt-1">
+          {{ day | date: 'dd/MM' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Body -->
+    <div class="grid grid-cols-7 min-h-[500px]">
+      <div *ngFor="let day of getWeekDays(); let i = index" 
+           class="border-r last:border-r-0 p-2 bg-gray-50">
+        
+        <div *ngFor="let shift of getShiftsForDay(shifts, day)" 
+             class="mb-2 border-2 rounded-lg p-3 transition-all cursor-pointer"
+             [ngClass]="getShiftTypeClass(shift.shiftType)">
+          
+          <!-- Shift Header -->
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-bold text-sm">
+              {{ getShiftTypeLabel(shift.shiftType) }}
+            </div>
+            <div class="text-xs font-medium px-2 py-0.5 rounded-full"
+                 [ngClass]="{
+                   'bg-green-100 text-green-700': getAvailableSlots(shift) > 5,
+                   'bg-yellow-100 text-yellow-700': getAvailableSlots(shift) > 0 && getAvailableSlots(shift) <= 5,
+                   'bg-red-100 text-red-700': getAvailableSlots(shift) === 0
+                 }">
+              Còn {{ getAvailableSlots(shift) }}/{{ shift.ptCapacity }}
+            </div>
+          </div>
+
+          <!-- Shift Time -->
+          <div class="text-xs text-gray-700 mb-2 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {{ formatTime(shift.startTime) }} - {{ formatTime(shift.endTime) }}
+          </div>
+
+          <!-- Registration Status (if already registered) -->
+          <div *ngIf="shift.myRegistration" class="mb-2">
+            <div class="text-xs font-medium px-2 py-1 rounded text-center"
+                 [ngClass]="{
+                   'bg-yellow-100 text-yellow-800': shift.myRegistration.status === 'PENDING',
+                   'bg-green-100 text-green-800': shift.myRegistration.status === 'APPROVED',
+                   'bg-red-100 text-red-800': shift.myRegistration.status === 'REJECTED'
+                 }">
+              <span *ngIf="shift.myRegistration.status === 'PENDING'">⏳ Chờ duyệt</span>
+              <span *ngIf="shift.myRegistration.status === 'APPROVED'">✓ Đã duyệt</span>
+              <span *ngIf="shift.myRegistration.status === 'REJECTED'">✗ Bị từ chối</span>
+            </div>
+          </div>
+
+          <!-- Register Button (only show if not registered) -->
+          <button *ngIf="!shift.myRegistration"
+            (click)="registerForShift(shift)"
+            [disabled]="isRegistering || !shift.canRegister"
+            class="w-full text-xs font-medium px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            [ngClass]="{
+              'bg-blue-600 text-white hover:bg-blue-700': shift.canRegister,
+              'bg-gray-300 text-gray-500 cursor-not-allowed': !shift.canRegister
+            }">
+            <span *ngIf="shift.canRegister">Đăng ký ca</span>
+            <span *ngIf="!shift.canRegister">Đã hết chỗ</span>
+          </button>
+
+          <!-- Notes -->
+          <div *ngIf="shift.notes" class="mt-2 text-xs text-gray-600 italic border-t pt-2">
+            {{ shift.notes }}
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="getShiftsForDay(shifts, day).length === 0" 
+             class="text-center py-8 text-gray-400 text-xs">
+          <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+          </svg>
+          Chưa có ca
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

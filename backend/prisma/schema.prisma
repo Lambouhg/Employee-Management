@@ -24,6 +24,14 @@ enum ScheduleStatus {
   PENDING // Chờ duyệt - nhân viên vừa submit
   APPROVED // Đã duyệt - quản lý đã xác nhận
   LOCKED // Đã khóa - không thể chỉnh sửa, sẵn sàng chấm công
+  REJECTED // Bị từ chối
+}
+
+// Trạng thái kế hoạch tuần của phòng ban
+enum PlanStatus {
+  DRAFT // Đang soạn thảo
+  PUBLISHED // Đã xuất bản - NV có thể vào đăng ký
+  LOCKED // Đã chốt - Không thể chỉnh sửa thêm
 }
 
 // Trạng thái yêu cầu nghỉ
@@ -69,6 +77,14 @@ enum ShiftType {
   NIGHT // Ca đêm
 }
 
+// Trạng thái đăng ký ca làm việc
+enum RegistrationStatus {
+  PENDING // Chờ duyệt
+  APPROVED // Đã duyệt
+  REJECTED // Bị từ chối
+  CANCELLED // Nhân viên hủy
+}
+
 // Roles allowed in the system. Only these three values are permitted.
 enum RoleName {
   MANAGER
@@ -81,12 +97,12 @@ enum RoleName {
 // ============================================
 
 model Role {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   // Use the strict enum to ensure only the three allowed roles exist
-  name        RoleName  @unique
+  name        RoleName @unique
   displayName String // "Quản lý", "Trưởng phòng", "Nhân viên"
   description String?
-  level       Int     @default(0) // Cấp độ: 3=Manager, 2=DeptManager, 1=Staff
+  level       Int      @default(0) // Cấp độ: 3=Manager, 2=DeptManager, 1=Staff
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -156,9 +172,171 @@ model Department {
   updatedAt DateTime @updatedAt
 
   // Relations
-  employees User[] @relation("DepartmentEmployees")
+  employees      User[]           @relation("DepartmentEmployees")
+  weeklyPlans    DeptWeeklyPlan[]
+  shiftTemplates ShiftTemplate[]
 
   @@map("departments")
+}
+
+// ============================================
+// 3.5 SHIFT TEMPLATE - Định nghĩa ca làm việc
+// ============================================
+
+model ShiftTemplate {
+  id String @id @default(uuid())
+
+  // Thông tin ca
+  name String // "Ca sáng hành chính", "Ca chiều", "Ca tối"
+  code String // "MORNING_8_17", "AFTERNOON_13_22"
+
+  // Phòng ban áp dụng
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // Loại ca và thời gian
+  shiftType  ShiftType // MORNING, AFTERNOON, EVENING, NIGHT
+  startTime  DateTime  @db.Time
+  endTime    DateTime  @db.Time
+  totalHours Float // Tổng số giờ (VD: 9.0, 8.5)
+
+  // Trạng thái
+  isActive Boolean @default(true) // ACTIVE/INACTIVE
+
+  // Áp dụng cho loại nhân viên nào
+  allowFullTime Boolean @default(true)
+  allowPartTime Boolean @default(true)
+
+  // Mô tả
+  description String?
+  notes       String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shiftOpenings ShiftOpening[]
+
+  // Constraints
+  @@unique([departmentId, code])
+  @@unique([departmentId, startTime, endTime]) // Không trùng giờ trong cùng phòng
+  @@index([departmentId, isActive])
+  @@map("shift_templates")
+}
+
+// ============================================
+// 3.6 DEPT WEEKLY PLAN - Kế hoạch tuần của phòng
+// ============================================
+
+model DeptWeeklyPlan {
+  id String @id @default(uuid())
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  weekStartDate DateTime // Ngày bắt đầu tuần (Monday)
+  status        PlanStatus @default(DRAFT)
+
+  // Người tạo/quản lý kế hoạch
+  createdByUserId String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shiftOpenings ShiftOpening[]
+
+  @@unique([departmentId, weekStartDate])
+  @@map("dept_weekly_plans")
+}
+
+model ShiftOpening {
+  id String @id @default(uuid())
+
+  // Thuộc plan nào
+  planId String
+  plan   DeptWeeklyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  // Tham chiếu template (nếu dùng template)
+  templateId String?
+  template   ShiftTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // Thông tin ca cụ thể
+  date      DateTime  @db.Date
+  shiftType ShiftType
+
+  // Thời gian (có thể override từ template)
+  startTime DateTime @db.Time
+  endTime   DateTime @db.Time
+
+  // === Quản lý capacity cho Full-time ===
+  isFTEnabled    Boolean @default(false) // Ca này có mở cho FT không?
+  ftAutoAssigned Boolean @default(true) // Tự động gán FT khi publish?
+
+  // === Quản lý capacity cho Part-time ===
+  isPTEnabled  Boolean @default(true) // Ca này có mở cho PT không?
+  ptCapacity   Int     @default(0) // Số slot tối đa cho PT
+  ptRegistered Int     @default(0) // Số PT đã đăng ký (tính tự động)
+
+  // Ghi chú
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shifts            Shift[]
+  shiftRegistrations ShiftRegistration[]
+
+  @@index([planId, date])
+  @@index([templateId])
+  @@map("shift_openings")
+}
+
+// ============================================
+// 3.7 SHIFT REGISTRATION - Đăng ký ca làm việc
+// ============================================
+
+model ShiftRegistration {
+  id String @id @default(uuid())
+
+  // Shift opening mà nhân viên đăng ký
+  openingId String
+  opening   ShiftOpening @relation(fields: [openingId], references: [id], onDelete: Cascade)
+
+  // Nhân viên đăng ký
+  employeeId String
+  employee   User   @relation("ShiftRegistrations", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Loại nhân viên (để phân biệt PT/FT khi cần)
+  employmentType EmploymentType
+
+  // Trạng thái đăng ký
+  status RegistrationStatus @default(PENDING)
+
+  // Người duyệt (Department Manager)
+  reviewedById String?
+  reviewedBy   User?     @relation("ReviewedRegistrations", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  // Lý do từ chối (nếu có)
+  rejectionReason String?
+
+  // Ghi chú từ nhân viên
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([openingId, employeeId]) // Một nhân viên chỉ đăng ký 1 lần cho 1 opening
+  @@index([openingId, status])
+  @@index([employeeId, status])
+  @@index([status, createdAt])
+  @@map("shift_registrations")
 }
 
 // ============================================
@@ -206,14 +384,16 @@ model User {
   // Relations
   schedules         WorkSchedule[] @relation("EmployeeSchedules")
   approvedSchedules WorkSchedule[] @relation("ApprovedSchedules")
-  
+
   // Team membership (optional)
   // Team concept removed — no team membership fields
-  shifts            Shift[]
-  attendances       Attendance[]
-  leaveRequests     LeaveRequest[] @relation("EmployeeLeaveRequests")
-  approvedLeaves    LeaveRequest[] @relation("ApprovedLeaveRequests")
-  activityLogs      ActivityLog[]
+  shifts                Shift[]
+  shiftRegistrations    ShiftRegistration[] @relation("ShiftRegistrations")
+  reviewedRegistrations ShiftRegistration[] @relation("ReviewedRegistrations")
+  attendances           Attendance[]
+  leaveRequests         LeaveRequest[]      @relation("EmployeeLeaveRequests")
+  approvedLeaves        LeaveRequest[]      @relation("ApprovedLeaveRequests")
+  activityLogs          ActivityLog[]
 
   @@index([departmentId])
   @@index([managerId])
@@ -292,12 +472,19 @@ model Shift {
   employeeId String
   employee   User   @relation(fields: [employeeId], references: [id])
 
+  // Tham chiếu opening (nếu đăng ký từ opening)
+  openingId String?
+  opening   ShiftOpening? @relation(fields: [openingId], references: [id], onDelete: SetNull)
+
   date      DateTime  @db.Date
   shiftType ShiftType
 
   // Thời gian ca làm việc
   startTime DateTime @db.Time
   endTime   DateTime @db.Time
+
+  // Loại ca: FT tự động tạo = true, PT đăng ký = false
+  isAutoGenerated Boolean @default(false)
 
   // Ghi chú
   notes String?
@@ -310,7 +497,9 @@ model Shift {
   attendance Attendance?
 
   @@unique([scheduleId, date, shiftType])
-  @@index([date, shiftType]) // Query nhanh ca theo ngày và loại
+  @@index([date, shiftType])
+  @@index([employeeId, date])
+  @@index([openingId])
   @@map("shifts")
 }
 

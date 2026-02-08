@@ -1,0 +1,189 @@
+<div class="leave-requests-page">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>Nghỉ phép</h1>
+            <p class="subtitle">Quản lý yêu cầu nghỉ phép của bạn</p>
+        </div>
+        <button class="btn btn-primary" (click)="createNewRequest()">
+            <i class="fas fa-plus"></i> Tạo yêu cầu mới
+        </button>
+    </div>
+
+    <!-- Leave Balance Card -->
+    @if (leaveBalance()) {
+    <div class="balance-card">
+        <div class="balance-header">
+            <i class="fas fa-calendar-check"></i>
+            <h2>Số dư phép năm {{currentYear}}</h2>
+        </div>
+        <div class="balance-stats">
+            <div class="stat-item">
+                <div class="stat-value">{{leaveBalance()!.totalAnnualLeave}}</div>
+                <div class="stat-label">Tổng phép năm</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value used">{{leaveBalance()!.usedLeave}}</div>
+                <div class="stat-label">Đã sử dụng</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value remaining">{{leaveBalance()!.remainingLeave}}</div>
+                <div class="stat-label">Còn lại</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value pending">{{leaveBalance()!.pendingLeave}}</div>
+                <div class="stat-label">Đang chờ duyệt</div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <button 
+            [class.active]="selectedStatus === 'ALL'" 
+            (click)="filterByStatus('ALL')">
+            Tất cả
+        </button>
+        <button 
+            [class.active]="selectedStatus === 'PENDING'" 
+            (click)="filterByStatus('PENDING')">
+            <i class="fas fa-clock"></i> Chờ duyệt
+        </button>
+        <button 
+            [class.active]="selectedStatus === 'APPROVED'" 
+            (click)="filterByStatus('APPROVED')">
+            <i class="fas fa-check-circle"></i> Đã duyệt
+        </button>
+        <button 
+            [class.active]="selectedStatus === 'REJECTED'" 
+            (click)="filterByStatus('REJECTED')">
+            <i class="fas fa-times-circle"></i> Bị từ chối
+        </button>
+    </div>
+
+    <!-- Loading -->
+    @if (loading()) {
+    <div class="loading">
+        <i class="fas fa-spinner fa-spin"></i> Đang tải...
+    </div>
+    }
+
+    <!-- Leave Requests List -->
+    @else if (leaveRequests()) {
+        @if (leaveRequests()!.data.length === 0) {
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>Chưa có yêu cầu nghỉ phép nào</p>
+            <button class="btn btn-primary" (click)="createNewRequest()">
+                Tạo yêu cầu mới
+            </button>
+        </div>
+        } @else {
+        <div class="requests-list">
+            @for (request of leaveRequests()!.data; track request.id) {
+            <div class="request-card">
+                <div class="request-header">
+                    <div class="request-type">
+                        <i class="fas fa-calendar-alt"></i>
+                        <strong>{{ getLeaveTypeName(request.leaveType) }}</strong>
+                    </div>
+                    <span [class]="'badge ' + getStatusClass(request.status)">
+                        {{ getStatusName(request.status) }}
+                    </span>
+                </div>
+
+                <div class="request-body">
+                    <div class="request-dates">
+                        <div class="date-item">
+                            <i class="fas fa-play-circle"></i>
+                            <span>{{ formatDate(request.startDate) }}</span>
+                        </div>
+                        <i class="fas fa-arrow-right"></i>
+                        <div class="date-item">
+                            <i class="fas fa-stop-circle"></i>
+                            <span>{{ formatDate(request.endDate) }}</span>
+                        </div>
+                        <div class="day-count">
+                            <i class="fas fa-calendar-day"></i>
+                            {{ request.dayCount }} ngày
+                        </div>
+                    </div>
+
+                    <div class="request-reason">
+                        <strong>Lý do:</strong> {{ request.reason }}
+                    </div>
+
+                    @if (request.status === 'APPROVED' && request.approvedBy) {
+                    <div class="approved-info">
+                        <i class="fas fa-user-check"></i>
+                        Đã duyệt bởi <strong>{{ request.approvedBy.fullName }}</strong>
+                        vào {{ formatDate(request.approvedAt!) }}
+                    </div>
+                    }
+
+                    @if (request.status === 'REJECTED') {
+                    <div class="rejected-info">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Lý do từ chối:</strong> {{ request.rejectionReason || 'Không có' }}
+                    </div>
+                    }
+                </div>
+
+                <div class="request-footer">
+                    <div class="request-date">
+                        <i class="fas fa-clock"></i>
+                        Tạo lúc: {{ formatDate(request.createdAt) }}
+                    </div>
+                    @if (request.status === 'PENDING') {
+                    <div class="request-actions">
+                        <button 
+                            class="btn btn-small btn-secondary" 
+                            (click)="editRequest(request.id)">
+                            <i class="fas fa-edit"></i> Sửa
+                        </button>
+                        <button 
+                            class="btn btn-small btn-danger" 
+                            (click)="deleteRequest(request.id, request.leaveType)"
+                            [disabled]="deleting() === request.id">
+                            @if (deleting() === request.id) {
+                            <i class="fas fa-spinner fa-spin"></i> Đang hủy...
+                            } @else {
+                            <i class="fas fa-trash"></i> Hủy
+                            }
+                        </button>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (leaveRequests()!.totalPages > 1) {
+        <div class="pagination">
+            <button 
+                class="btn-page" 
+                [disabled]="currentPage === 1" 
+                (click)="goToPage(currentPage - 1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            @for (page of pages; track page) {
+            <button 
+                class="btn-page" 
+                [class.active]="page === currentPage" 
+                (click)="goToPage(page)">
+                {{ page }}
+            </button>
+            }
+            <button 
+                class="btn-page" 
+                [disabled]="currentPage === leaveRequests()!.totalPages" 
+                (click)="goToPage(currentPage + 1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        }
+        }
+    }
+</div>
