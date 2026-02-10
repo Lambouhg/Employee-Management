@@ -1,0 +1,119 @@
+<div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+  <!-- Calendar Header -->
+  <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <h2 class="text-lg font-bold text-white">Weekly Schedule</h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-blue-100">
+          Total Shifts: <span class="font-bold text-white">{{ totalShifts }}</span>
+        </span>
+        <button 
+          *ngIf="canEdit"
+          type="button"
+          class="inline-flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium text-xs shadow-md"
+          (click)="onAddShift()">
+          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Add Shift
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div class="p-4">
+    <div class="grid grid-cols-7 gap-4">
+      <!-- Day Columns -->
+      <div *ngFor="let day of weekDays; let i = index" class="flex flex-col">
+        <!-- Day Header -->
+        <div class="sticky top-0 z-10 bg-white pb-2 mb-4 border-b-2"
+             [ngClass]="{
+               'border-red-400': getDayName(day) === 'CN',
+               'border-blue-400': getDayName(day) !== 'CN'
+             }">
+          <div class="text-center">
+            <div class="text-[10px] font-bold uppercase tracking-wide"
+                 [ngClass]="{
+                   'text-red-600': getDayName(day) === 'CN',
+                   'text-gray-600': getDayName(day) !== 'CN'
+                 }">
+              {{ getDayName(day) }}
+            </div>
+            <div class="flex items-center justify-center mt-0.5">
+              <span class="text-xl font-black"
+                    [ngClass]="{
+                      'text-red-600': getDayName(day) === 'CN',
+                      'text-gray-800': getDayName(day) !== 'CN'
+                    }">
+                {{ formatDateNumber(day) }}
+              </span>
+              <span class="text-xs text-gray-500 ml-0.5">/{{ getMonthNumber(day) }}</span>
+            </div>
+          </div>
+
+          <!-- Quick Add Button -->
+          <button 
+            *ngIf="canEdit"
+            type="button"
+            class="w-full mt-1.5 py-1 px-2 text-xs rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+            (click)="onQuickAddShift(day)"
+            title="Add shift for this day">
+            <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Shift Cards Container -->
+        <div class="space-y-6 min-h-[120px]">
+          <ng-container *ngIf="getShiftsForDay(day) as dayShifts">
+            <div *ngIf="dayShifts.length === 0" class="flex items-center justify-center h-20 text-center">
+              <div class="text-gray-400">
+                <svg class="w-8 h-8 mx-auto mb-1.5 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+                <p class="text-[10px] font-medium">No shifts</p>
+              </div>
+            </div>
+            
+            <app-shift-card
+              *ngFor="let shift of dayShifts"
+              [shift]="shift"
+              [canEdit]="canEdit"
+              (edit)="onViewDetail($event)"
+              (delete)="onDeleteShift($event)">
+            </app-shift-card>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Footer/Legend -->
+  <div class="bg-gray-50 px-4 py-2.5 border-t border-gray-200">
+    <div class="flex items-center justify-center gap-5 text-[10px]">
+      <div class="flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300"></div>
+        <span class="text-gray-600 font-medium">Morning</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-300"></div>
+        <span class="text-gray-600 font-medium">Afternoon</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-300"></div>
+        <span class="text-gray-600 font-medium">Evening</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded bg-gradient-to-br from-slate-100 to-gray-100 border border-slate-400"></div>
+        <span class="text-gray-600 font-medium">Night</span>
+      </div>
+    </div>
+  </div>
+</div>

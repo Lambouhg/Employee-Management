@@ -106,6 +106,34 @@ export class StaffShiftRegistrationsService {
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
 
+    // Get all existing shifts for the user in the date range
+    const shiftDateFilter: Prisma.ShiftWhereInput['date'] = {};
+    if (query.startDate) {
+      (shiftDateFilter as any).gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      (shiftDateFilter as any).lte = new Date(query.endDate);
+    }
+
+    const existingShifts = await this.prisma.shift.findMany({
+      where: {
+        employeeId: userId,
+        ...(Object.keys(shiftDateFilter).length > 0 && { date: shiftDateFilter }),
+      },
+      select: {
+        date: true,
+        shiftType: true,
+      },
+    });
+
+    // Create a map for quick lookup: "date|shiftType" -> true
+    const existingShiftMap = new Map(
+      existingShifts.map(shift => [
+        `${shift.date.toISOString().split('T')[0]}|${shift.shiftType}`,
+        true,
+      ]),
+    );
+
     // Calculate availability and filter out full shifts for PT
     return openings
       .map((opening) => {
@@ -116,6 +144,11 @@ export class StaffShiftRegistrationsService {
             : null;
 
         const myRegistration = opening.shiftRegistrations[0] || null;
+
+        // Check if user already has a shift assigned for this date
+        const dateStr = opening.date.toISOString().split('T')[0];
+        const shiftKey = `${dateStr}|${opening.shiftType}`;
+        const hasExistingShift = existingShiftMap.has(shiftKey);
 
         return {
           id: opening.id,
@@ -133,9 +166,11 @@ export class StaffShiftRegistrationsService {
           availableSlots,
           canRegister:
             !myRegistration &&
+            !hasExistingShift &&
             (user.employmentType === EmploymentType.FULL_TIME ||
               (availableSlots ?? 0) > 0),
           myRegistration,
+          hasExistingShift,
         };
       })
       .filter((opening) => {
@@ -225,6 +260,21 @@ export class StaffShiftRegistrationsService {
 
     if (existingRegistration) {
       throw new ConflictException('You have already registered for this shift');
+    }
+
+    // Check if user already has a shift assigned for this date and shift type
+    const existingShift = await this.prisma.shift.findFirst({
+      where: {
+        employeeId: userId,
+        date: opening.date,
+        shiftType: opening.shiftType,
+      },
+    });
+
+    if (existingShift) {
+      throw new ConflictException(
+        'You already have a shift assigned for this date and shift type',
+      );
     }
 
     // Create registration

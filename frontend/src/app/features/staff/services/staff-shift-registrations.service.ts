@@ -27,6 +27,7 @@ export interface ShiftOpening {
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     createdAt: Date;
   } | null;
+  hasExistingShift?: boolean;
 }
 
 export interface ShiftRegistration {

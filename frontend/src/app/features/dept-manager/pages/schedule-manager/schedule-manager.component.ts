@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DeptManagerSchedulesService } from '../../services/dept-manager-schedules.service';
+import { DeptManagerSchedulesService } from '../../services/schedules.service';
 import { DeptWeeklyPlan, PlanStatus } from '@core/models/schedule.model';
 import { AuthService } from '@core/services/auth.service';
 import { RouterLink } from '@angular/router';
@@ -103,5 +103,41 @@ export class ScheduleManagerComponent implements OnInit {
       'LOCKED': 'Đã Khóa'
     };
     return statusMap[status as string] || status as string;
+  }
+
+  /**
+   * Get total number of assigned employees in a schedule
+   */
+  getTotalAssignedEmployees(schedule: DeptWeeklyPlan): number {
+    if (!schedule.shiftOpenings) return 0;
+    let total = 0;
+    schedule.shiftOpenings.forEach(opening => {
+      total += opening.shifts?.length || 0;
+    });
+    return total;
+  }
+
+  /**
+   * Calculate attendance rate for a schedule
+   */
+  getScheduleAttendanceRate(schedule: DeptWeeklyPlan): number {
+    if (!schedule.shiftOpenings) return 0;
+    
+    let totalShifts = 0;
+    let attendedShifts = 0;
+
+    schedule.shiftOpenings.forEach(opening => {
+      if (opening.shifts) {
+        opening.shifts.forEach(shift => {
+          totalShifts++;
+          const attendance = (shift as any).attendance;
+          if (attendance && (attendance.status === 'PRESENT' || attendance.status === 'LATE')) {
+            attendedShifts++;
+          }
+        });
+      }
+    });
+
+    return totalShifts > 0 ? Math.round((attendedShifts / totalShifts) * 100) : 0;
   }
 }

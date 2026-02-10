@@ -1,8 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { DepartmentService } from '@core/services/department.service';
-import { ManagerService } from '@core/services/manager.service';
+import { DepartmentService } from '../../services/department.service';
+import { ManagerService } from '../../services/manager.service';
 import { DepartmentDetail } from '@core/models/department.model';
 import { DepartmentFormModalComponent } from '../../components/department-form-modal/department-form-modal.component';
 import { AssignManagerModalComponent } from '../../components/assign-manager-modal/assign-manager-modal.component';

@@ -70,14 +70,14 @@ export class StaffLeavesService {
     private apiUrl = `${environment.apiUrl}/staff/leaves`;
 
     /**
-     * Tạo yêu cầu nghỉ phép mới
+     * Create new leave request
      */
     createLeaveRequest(request: CreateLeaveRequest): Observable<StaffLeaveRequest> {
         return this.http.post<StaffLeaveRequest>(this.apiUrl, request);
     }
 
     /**
-     * Lấy danh sách yêu cầu nghỉ phép
+     * Get list of leave requests
      */
     getMyLeaveRequests(params?: GetLeaveParams): Observable<LeaveRequestList> {
         let httpParams = new HttpParams();
@@ -94,7 +94,7 @@ export class StaffLeavesService {
     }
 
     /**
-     * Lấy số dư phép năm
+     * Get leave balance
      */
     getLeaveBalance(): Observable<LeaveBalance> {
         return this.http.get<LeaveBalance>(`${this.apiUrl}/balance`);

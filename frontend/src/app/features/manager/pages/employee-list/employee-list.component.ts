@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '@core/services/auth.service';
-import { ManagerService } from '@app/core/services/manager.service';
-import { DepartmentService } from '@core/services/department.service';
+import { ManagerService } from '../../services/manager.service';
+import { DepartmentService } from '../../services/department.service';
 import { Employee, EmployeeQueryParams } from '@core/models/employee.model';
 import { Role } from '@core/models/role.model';
 import { Department } from '@core/models/department.model';

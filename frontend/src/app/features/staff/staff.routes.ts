@@ -6,7 +6,11 @@ export const STAFF_ROUTES: Routes = [
         path: '',
         component: StaffLayoutComponent,
         children: [
-            { path: '', redirectTo: 'my-schedule', pathMatch: 'full' },
+            { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+            {
+                path: 'dashboard',
+                loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
+            },
             {
                 path: 'my-schedule',
                 loadComponent: () => import('./pages/my-schedule/my-schedule.component').then(m => m.MyScheduleComponent)

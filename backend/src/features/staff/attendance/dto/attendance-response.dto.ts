@@ -21,24 +21,25 @@ export class AttendanceResponseDto {
     };
 }
 
-export class TodayAttendanceDto {
-    hasShift: boolean; // Có ca làm hôm nay không
-    shift?: {
-        id: string;
-        date: Date;
-        shiftType: ShiftType;
-        startTime: Date;
-        endTime: Date;
-        notes: string | null;
-    };
+export class ShiftWithAttendanceDto {
+    id: string;
+    date: Date;
+    shiftType: ShiftType;
+    startTime: Date;
+    endTime: Date;
+    notes: string | null;
     attendance?: {
         id: string;
         checkInTime: Date | null;
         status: AttendanceStatus;
         notes: string | null;
-        canCheckIn: boolean; // Có thể điểm danh được không
-        message?: string; // Thông báo (quá giờ, đã điểm danh, etc.)
     };
-    canCheckIn: boolean; // Có thể điểm danh không
-    message?: string; // Thông báo cho user
+    canCheckIn: boolean;
+    message: string;
+}
+
+export class TodayAttendanceDto {
+    hasShift: boolean;
+    shifts: ShiftWithAttendanceDto[];
+    message: string;
 }

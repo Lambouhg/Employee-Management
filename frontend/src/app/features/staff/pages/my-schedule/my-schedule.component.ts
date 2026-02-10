@@ -57,10 +57,10 @@ export class MyScheduleComponent implements OnInit {
      */
     getShiftTypeName(type: string): string {
         const names: Record<string, string> = {
-            'MORNING': 'Ca sáng',
-            'AFTERNOON': 'Ca chiều',
-            'EVENING': 'Ca tối',
-            'NIGHT': 'Ca đêm'
+            'MORNING': 'Morning',
+            'AFTERNOON': 'Afternoon',
+            'EVENING': 'Evening',
+            'NIGHT': 'Night'
         };
         return names[type] || type;
     }
@@ -70,25 +70,25 @@ export class MyScheduleComponent implements OnInit {
      */
     getStatusName(status: string): string {
         const names: Record<string, string> = {
-            'PENDING': 'Chờ duyệt',
-            'APPROVED': 'Đã duyệt',
-            'LOCKED': 'Đã khóa',
-            'REJECTED': 'Bị từ chối'
+            'PENDING': 'Pending',
+            'APPROVED': 'Approved',
+            'LOCKED': 'Locked',
+            'REJECTED': 'Rejected'
         };
         return names[status] || status;
     }
 
     /**
-     * Get status class
+     * Get status badge class for Tailwind CSS
      */
-    getStatusClass(status: string): string {
+    getStatusBadgeClass(status: string): string {
         const classes: Record<string, string> = {
-            'PENDING': 'badge-warning',
-            'APPROVED': 'badge-success',
-            'LOCKED': 'badge-info',
-            'REJECTED': 'badge-danger'
+            'PENDING': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800',
+            'APPROVED': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800',
+            'LOCKED': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800',
+            'REJECTED': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800'
         };
-        return classes[status] || 'badge-secondary';
+        return classes[status] || 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800';
     }
 
     /**
@@ -96,10 +96,10 @@ export class MyScheduleComponent implements OnInit {
      */
     formatDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
+        return date.toLocaleDateString('en-US', {
             weekday: 'short',
             year: 'numeric',
-            month: '2-digit',
+            month: 'short',
             day: '2-digit'
         });
     }
@@ -109,9 +109,10 @@ export class MyScheduleComponent implements OnInit {
      */
     formatTime(timeString: string): string {
         const date = new Date(timeString);
-        return date.toLocaleTimeString('vi-VN', {
+        return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     }
 
@@ -123,6 +124,64 @@ export class MyScheduleComponent implements OnInit {
         const end = new Date(start);
         end.setDate(end.getDate() + 6);
 
-        return `${start.toLocaleDateString('vi-VN')} - ${end.toLocaleDateString('vi-VN')}`;
+        return `${start.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}`;
     }
+
+    /**
+     * Check if date is today
+     */
+    isToday(dateString: string): boolean {
+        const date = new Date(dateString);
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    }
+
+    /**
+     * Get total shifts count across all schedules
+     */
+    getTotalShiftsCount(): number {
+        return this.schedules().reduce((total, schedule) => total + schedule.shifts.length, 0);
+    }
+
+    /**
+     * Get upcoming shifts count (future dates only)
+     */
+    getUpcomingShiftsCount(): number {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        return this.schedules().reduce((count, schedule) => {
+            const futureShifts = schedule.shifts.filter(shift => {
+                const shiftDate = new Date(shift.date);
+                shiftDate.setHours(0, 0, 0, 0);
+                return shiftDate >= today;
+            });
+            return count + futureShifts.length;
+        }, 0);
+    }
+
+    /**
+     * Calculate shift duration in hours
+     */
+    calculateDuration(startTime: string, endTime: string): number {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const diffMs = end.getTime() - start.getTime();
+        const hours = diffMs / (1000 * 60 * 60);
+        return Math.round(hours * 10) / 10; // Round to 1 decimal
+    }
+
+    /**
+     * Get shift type color classes
+     */
+    getShiftTypeColor(type: string): string {
+        const colors: Record<string, string> = {
+            'MORNING': 'bg-amber-100 text-amber-800',
+            'AFTERNOON': 'bg-orange-100 text-orange-800',
+            'EVENING': 'bg-indigo-100 text-indigo-800',
+            'NIGHT': 'bg-purple-100 text-purple-800'
+        };
+        return colors[type] || 'bg-gray-100 text-gray-800';
+    }
+
 }

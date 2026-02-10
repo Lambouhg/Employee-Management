@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
-import { ManagerService } from '@app/core/services/manager.service';
+import { ManagerService } from '../../services/manager.service';
 
 import { User } from '@core/models/auth.model';
 import { 

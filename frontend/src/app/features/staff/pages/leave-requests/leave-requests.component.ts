@@ -2,6 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { StaffLeavesService, StaffLeaveRequest, LeaveBalance, LeaveRequestList } from '../../services/staff-leaves.service';
+import { ToastService } from '../../../../shared/services/toast.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
     selector: 'app-leave-requests',
@@ -13,6 +15,8 @@ import { StaffLeavesService, StaffLeaveRequest, LeaveBalance, LeaveRequestList }
 export class LeaveRequestsComponent implements OnInit {
     private leavesService = inject(StaffLeavesService);
     private router = inject(Router);
+    private toastService = inject(ToastService);
+    private confirmDialog = inject(ConfirmDialogService);
 
     // Signals
     leaveRequests = signal<LeaveRequestList | null>(null);
@@ -99,23 +103,29 @@ export class LeaveRequestsComponent implements OnInit {
      * Delete request
      */
     deleteRequest(id: string, leaveType: string) {
-        if (!confirm(`Bạn có chắc chắn muốn hủy yêu cầu nghỉ ${this.getLeaveTypeName(leaveType)} này?`)) {
-            return;
-        }
+        this.confirmDialog.confirm({
+            title: 'Cancel Leave Request?',
+            message: `Are you sure you want to cancel this ${this.getLeaveTypeName(leaveType)} request?`,
+            confirmText: 'Cancel Request',
+            cancelText: 'Keep It',
+            type: 'danger'
+        }).subscribe(confirmed => {
+            if (!confirmed) return;
 
-        this.deleting.set(id);
-        this.leavesService.deleteLeaveRequest(id).subscribe({
-            next: () => {
-                alert('Đã hủy yêu cầu thành công');
-                this.deleting.set(null);
-                this.loadLeaveRequests(this.currentPage);
-                this.loadLeaveBalance();
-            },
-            error: (error) => {
-                this.deleting.set(null);
-                const message = error.error?.message || 'Có lỗi xảy ra khi hủy yêu cầu';
-                alert(message);
-            }
+            this.deleting.set(id);
+            this.leavesService.deleteLeaveRequest(id).subscribe({
+                next: () => {
+                    this.toastService.success('Leave request canceled successfully!');
+                    this.deleting.set(null);
+                    this.loadLeaveRequests(this.currentPage);
+                    this.loadLeaveBalance();
+                },
+                error: (error) => {
+                    this.deleting.set(null);
+                    const message = error.error?.message || 'Failed to cancel leave request';
+                    this.toastService.error(message);
+                }
+            });
         });
     }
 
@@ -124,10 +134,10 @@ export class LeaveRequestsComponent implements OnInit {
      */
     getLeaveTypeName(type: string): string {
         const names: Record<string, string> = {
-            'SICK': 'Nghỉ ốm',
-            'EMERGENCY': 'Bất khả kháng',
-            'PERSONAL': 'Cá nhân',
-            'OTHER': 'Khác'
+            'SICK': 'Sick Leave',
+            'EMERGENCY': 'Emergency Leave',
+            'PERSONAL': 'Personal Leave',
+            'OTHER': 'Other'
         };
         return names[type] || type;
     }
@@ -137,23 +147,23 @@ export class LeaveRequestsComponent implements OnInit {
      */
     getStatusName(status: string): string {
         const names: Record<string, string> = {
-            'PENDING': 'Chờ duyệt',
-            'APPROVED': 'Đã duyệt',
-            'REJECTED': 'Bị từ chối'
+            'PENDING': 'Pending',
+            'APPROVED': 'Approved',
+            'REJECTED': 'Rejected'
         };
         return names[status] || status;
     }
 
     /**
-     * Get status badge class
+     * Get status badge class for Tailwind CSS
      */
-    getStatusClass(status: string): string {
+    getStatusBadgeClass(status: string): string {
         const classes: Record<string, string> = {
-            'PENDING': 'badge-warning',
-            'APPROVED': 'badge-success',
-            'REJECTED': 'badge-danger'
+            'PENDING': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800',
+            'APPROVED': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800',
+            'REJECTED': 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800'
         };
-        return classes[status] || 'badge-secondary';
+        return classes[status] || 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800';
     }
 
     /**
@@ -161,9 +171,9 @@ export class LeaveRequestsComponent implements OnInit {
      */
     formatDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
+        return date.toLocaleDateString('en-US', {
             year: 'numeric',
-            month: '2-digit',
+            month: 'short',
             day: '2-digit'
         });
     }

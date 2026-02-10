@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { StaffLeavesService, CreateLeaveRequest, StaffLeaveRequest } from '../../services/staff-leaves.service';
+import { LoadingSpinnerComponent, ErrorMessageComponent } from '../../../../shared/components';
+import { ToastService } from '../../../../shared/services/toast.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
     selector: 'app-leave-request-form',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, LoadingSpinnerComponent, ErrorMessageComponent],
     templateUrl: './leave-request-form.component.html',
     styleUrl: './leave-request-form.component.css'
 })
@@ -15,6 +18,8 @@ export class LeaveRequestFormComponent implements OnInit {
     private leavesService = inject(StaffLeavesService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
+    private toastService = inject(ToastService);
+    private confirmDialog = inject(ConfirmDialogService);
 
     // Signals
     loading = signal(false);
@@ -64,7 +69,7 @@ export class LeaveRequestFormComponent implements OnInit {
             },
             error: (error) => {
                 console.error('Error loading leave request:', error);
-                alert('Không thể tải thông tin yêu cầu');
+                this.toastService.error('Cannot load leave request information');
                 this.router.navigate(['/staff/leaves']);
                 this.loading.set(false);
             }
@@ -78,15 +83,15 @@ export class LeaveRequestFormComponent implements OnInit {
         this.errors = {};
 
         if (!this.leaveType) {
-            this.errors['leaveType'] = 'Vui lòng chọn loại nghỉ';
+            this.errors['leaveType'] = 'Please select leave type';
         }
 
         if (!this.startDate) {
-            this.errors['startDate'] = 'Vui lòng chọn ngày bắt đầu';
+            this.errors['startDate'] = 'Please select start date';
         }
 
         if (!this.endDate) {
-            this.errors['endDate'] = 'Vui lòng chọn ngày kết thúc';
+            this.errors['endDate'] = 'Please select end date';
         }
 
         if (this.startDate && this.endDate) {
@@ -94,12 +99,12 @@ export class LeaveRequestFormComponent implements OnInit {
             const end = new Date(this.endDate);
 
             if (end < start) {
-                this.errors['endDate'] = 'Ngày kết thúc phải sau ngày bắt đầu';
+                this.errors['endDate'] = 'End date must be after start date';
             }
         }
 
         if (!this.reason || this.reason.trim().length < 10) {
-            this.errors['reason'] = 'Lý do phải có ít nhất 10 ký tự';
+            this.errors['reason'] = 'Reason must be at least 10 characters';
         }
 
         return Object.keys(this.errors).length === 0;
@@ -128,16 +133,19 @@ export class LeaveRequestFormComponent implements OnInit {
 
         observable.subscribe({
             next: () => {
+                this.submitting.set(false);
                 const message = this.isEditMode() 
-                    ? 'Đã cập nhật yêu cầu thành công' 
-                    : 'Đã tạo yêu cầu nghỉ phép thành công';
-                alert(message);
+                    ? 'Leave request updated successfully!' 
+                    : this.isEmergencyLeave
+                        ? 'Emergency leave request submitted successfully!'
+                        : 'Leave request submitted successfully!';
+                this.toastService.success(message);
                 this.router.navigate(['/staff/leaves']);
             },
             error: (error) => {
                 this.submitting.set(false);
-                const message = error.error?.message || 'Có lỗi xảy ra. Vui lòng thử lại';
-                alert(message);
+                const message = error.error?.message || 'An error occurred. Please try again.';
+                this.toastService.error(message);
             }
         });
     }
@@ -146,7 +154,25 @@ export class LeaveRequestFormComponent implements OnInit {
      * Cancel and go back
      */
     onCancel() {
-        if (confirm('Bạn có chắc chắn muốn hủy? Các thay đổi sẽ không được lưu.')) {
+        // Check if form has unsaved changes
+        const hasChanges = this.leaveType !== 'PERSONAL' || 
+                          this.startDate !== new Date().toISOString().split('T')[0] ||
+                          this.endDate !== new Date().toISOString().split('T')[0] ||
+                          this.reason.trim().length > 0;
+
+        if (hasChanges) {
+            this.confirmDialog.confirm({
+                title: 'Discard Changes?',
+                message: 'You have unsaved changes. Are you sure you want to leave without saving?',
+                confirmText: 'Discard',
+                cancelText: 'Continue Editing',
+                type: 'warning'
+            }).subscribe(confirmed => {
+                if (confirmed) {
+                    this.router.navigate(['/staff/leaves']);
+                }
+            });
+        } else {
             this.router.navigate(['/staff/leaves']);
         }
     }
@@ -156,10 +182,10 @@ export class LeaveRequestFormComponent implements OnInit {
      */
     getLeaveTypeName(type: string): string {
         const names: Record<string, string> = {
-            'SICK': 'Nghỉ ốm',
-            'EMERGENCY': 'Bất khả kháng',
-            'PERSONAL': 'Cá nhân',
-            'OTHER': 'Khác'
+            'SICK': 'Sick Leave',
+            'EMERGENCY': 'Emergency Leave',
+            'PERSONAL': 'Personal Leave',
+            'OTHER': 'Other'
         };
         return names[type] || type;
     }
@@ -175,6 +201,21 @@ export class LeaveRequestFormComponent implements OnInit {
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays + 1;
+    }
+
+    /**
+     * Check if this is an emergency leave (within 2 days from today)
+     */
+    get isEmergencyLeave(): boolean {
+        if (!this.startDate) return false;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const emergencyThreshold = new Date(today);
+        emergencyThreshold.setDate(emergencyThreshold.getDate() + 2);
+        
+        const requestStart = new Date(this.startDate);
+        return requestStart <= emergencyThreshold;
     }
 
     /**

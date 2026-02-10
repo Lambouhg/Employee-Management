@@ -11,89 +11,92 @@ export class StaffAttendanceService {
      * Lấy thông tin ca làm và trạng thái điểm danh hôm nay
      */
     async getTodayAttendance(employeeId: string): Promise<TodayAttendanceDto> {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Lấy ngày hôm nay theo UTC
+        const now = new Date();
+        const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const tomorrowUTC = new Date(todayUTC);
+        tomorrowUTC.setUTCDate(todayUTC.getUTCDate() + 1);
 
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Tìm ca làm hôm nay
-        const shift = await this.prisma.shift.findFirst({
+        // Tìm TẤT CẢ ca làm hôm nay
+        const shifts = await this.prisma.shift.findMany({
             where: {
                 employeeId,
                 date: {
-                    gte: today,
-                    lt: tomorrow,
+                    gte: todayUTC,
+                    lt: tomorrowUTC,
                 },
             },
             include: {
                 attendance: true,
             },
+            orderBy: {
+                startTime: 'asc', // Sắp xếp theo thời gian bắt đầu
+            },
         });
 
-        if (!shift) {
+        if (!shifts || shifts.length === 0) {
             return {
                 hasShift: false,
-                canCheckIn: false,
-                message: 'Bạn không có ca làm việc hôm nay',
+                shifts: [],
+                message: 'You have no shift scheduled for today',
             };
         }
 
-        // Kiểm tra đã điểm danh chưa
-        if (shift.attendance) {
-            return {
-                hasShift: true,
-                shift: {
+        // Process từng shift
+        const processedShifts = shifts.map(shift => {
+            // Kiểm tra đã điểm danh chưa
+            if (shift.attendance) {
+                return {
                     id: shift.id,
                     date: shift.date,
                     shiftType: shift.shiftType,
                     startTime: shift.startTime,
                     endTime: shift.endTime,
                     notes: shift.notes,
-                },
-                attendance: {
-                    id: shift.attendance.id,
-                    checkInTime: shift.attendance.checkInTime,
-                    status: shift.attendance.status,
-                    notes: shift.attendance.notes,
+                    attendance: {
+                        id: shift.attendance.id,
+                        checkInTime: shift.attendance.checkInTime,
+                        status: shift.attendance.status,
+                        notes: shift.attendance.notes,
+                    },
                     canCheckIn: false,
-                    message: 'Bạn đã điểm danh cho ca làm này',
-                },
-                canCheckIn: false,
-                message: 'Bạn đã điểm danh cho ca làm này',
-            };
-        }
+                    message: 'You have already checked in for this shift',
+                };
+            }
 
-        // Kiểm tra có trong khung giờ cho phép điểm danh không
-        const now = new Date();
-        const shiftStart = this.combineDateTime(shift.date, shift.startTime);
-        const allowCheckInFrom = new Date(shiftStart.getTime() - 30 * 60 * 1000); // 30 phút trước
-        const allowCheckInTo = new Date(shiftStart.getTime() + 60 * 60 * 1000); // 60 phút sau
+            // Kiểm tra có trong khung giờ cho phép điểm danh không
+            const shiftStart = this.combineDateTime(shift.date, shift.startTime);
+            const allowCheckInFrom = new Date(shiftStart.getTime() - 30 * 60 * 1000); // 30 phút trước
+            const allowCheckInTo = new Date(shiftStart.getTime() + 60 * 60 * 1000); // 60 phút sau
 
-        const canCheckIn = now >= allowCheckInFrom && now <= allowCheckInTo;
-        let message = '';
+            const canCheckIn = now >= allowCheckInFrom && now <= allowCheckInTo;
+            let message = '';
 
-        if (now < allowCheckInFrom) {
-            const minutesUntil = Math.ceil((allowCheckInFrom.getTime() - now.getTime()) / (60 * 1000));
-            message = `Chưa đến giờ điểm danh. Vui lòng quay lại sau ${minutesUntil} phút`;
-        } else if (now > allowCheckInTo) {
-            message = 'Đã quá thời gian cho phép điểm danh';
-        } else {
-            message = 'Bạn có thể điểm danh ngay bây giờ';
-        }
+            if (now < allowCheckInFrom) {
+                const minutesUntil = Math.ceil((allowCheckInFrom.getTime() - now.getTime()) / (60 * 1000));
+                message = `Check-in available in ${minutesUntil} minutes`;
+            } else if (now > allowCheckInTo) {
+                message = 'Check-in time has expired';
+            } else {
+                message = 'You can check in now';
+            }
 
-        return {
-            hasShift: true,
-            shift: {
+            return {
                 id: shift.id,
                 date: shift.date,
                 shiftType: shift.shiftType,
                 startTime: shift.startTime,
                 endTime: shift.endTime,
                 notes: shift.notes,
-            },
-            canCheckIn,
-            message,
+                canCheckIn,
+                message,
+            };
+        });
+
+        return {
+            hasShift: true,
+            shifts: processedShifts,
+            message: `You have ${shifts.length} shift${shifts.length > 1 ? 's' : ''} today`,
         };
     }
 
@@ -101,37 +104,29 @@ export class StaffAttendanceService {
      * Điểm danh ca làm việc
      */
     async checkIn(employeeId: string, dto: CheckInDto): Promise<AttendanceResponseDto> {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const now = new Date();
 
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Tìm ca làm hôm nay
-        const shift = await this.prisma.shift.findFirst({
-            where: {
-                employeeId,
-                date: {
-                    gte: today,
-                    lt: tomorrow,
-                },
-            },
-            include: {
-                attendance: true,
-            },
+        // Tìm shift cụ thể cần check-in
+        const shift = await this.prisma.shift.findUnique({
+            where: { id: dto.shiftId },
+            include: { attendance: true },
         });
 
         if (!shift) {
-            throw new NotFoundException('Không tìm thấy ca làm việc hôm nay');
+            throw new NotFoundException('Shift not found');
+        }
+
+        // Verify shift belongs to this employee
+        if (shift.employeeId !== employeeId) {
+            throw new BadRequestException('This shift does not belong to you');
         }
 
         // Kiểm tra đã điểm danh chưa
         if (shift.attendance) {
-            throw new BadRequestException('Bạn đã điểm danh cho ca làm này rồi');
+            throw new BadRequestException('You have already checked in for this shift');
         }
 
         // Kiểm tra khung giờ cho phép
-        const now = new Date();
         const shiftStart = this.combineDateTime(shift.date, shift.startTime);
         const shiftEnd = this.combineDateTime(shift.date, shift.endTime);
         
@@ -139,16 +134,30 @@ export class StaffAttendanceService {
         const allowCheckInTo = new Date(shiftStart.getTime() + 60 * 60 * 1000); // 60 phút sau
 
         if (now < allowCheckInFrom) {
-            throw new BadRequestException('Chưa đến giờ điểm danh. Vui lòng quay lại sau');
+            throw new BadRequestException('Check-in not available yet. Please try again later');
         }
 
         if (now > allowCheckInTo) {
-            throw new BadRequestException('Đã quá thời gian cho phép điểm danh');
+            throw new BadRequestException('Check-in time has expired');
         }
 
         // Xác định trạng thái điểm danh
         const lateThreshold = new Date(shiftStart.getTime() + 15 * 60 * 1000); // 15 phút sau giờ bắt đầu
         const status: AttendanceStatus = now > lateThreshold ? 'LATE' : 'PRESENT';
+
+        // Tính số phút muộn và tạo notes tự động
+        let finalNotes = dto.notes || null;
+        if (status === 'LATE') {
+            const minutesLate = Math.floor((now.getTime() - lateThreshold.getTime()) / (60 * 1000));
+            const lateNote = `Late arrival (${minutesLate} minutes)`;
+            
+            // Combine với notes của user nếu có
+            if (dto.notes) {
+                finalNotes = `${lateNote}. ${dto.notes}`;
+            } else {
+                finalNotes = lateNote;
+            }
+        }
 
         // Tạo bản ghi điểm danh
         const attendance = await this.prisma.attendance.create({
@@ -157,7 +166,7 @@ export class StaffAttendanceService {
                 employeeId,
                 checkInTime: now,
                 status,
-                notes: dto.notes,
+                notes: finalNotes,
             },
             include: {
                 shift: true,
@@ -176,6 +185,9 @@ export class StaffAttendanceService {
     ): Promise<AttendanceHistoryResponseDto> {
         const { startDate, endDate, page = 1, limit = 10 } = dto;
         const skip = (page - 1) * limit;
+
+        // Tự động đánh ABSENT cho các ca đã qua mà chưa điểm danh
+        await this.markAbsentForMissedShifts(employeeId);
 
         const where: any = {
             employeeId,
@@ -226,6 +238,44 @@ export class StaffAttendanceService {
         const result = new Date(date);
         result.setHours(time.getHours(), time.getMinutes(), time.getSeconds(), 0);
         return result;
+    }
+
+    /**
+     * Tự động đánh ABSENT cho các ca đã qua mà chưa điểm danh
+     * Gọi hàm này trước khi lấy history để cập nhật trạng thái
+     */
+    async markAbsentForMissedShifts(employeeId: string): Promise<void> {
+        const now = new Date();
+
+        // Tìm các ca đã qua mà chưa có attendance
+        const missedShifts = await this.prisma.shift.findMany({
+            where: {
+                employeeId,
+                attendance: null, // Chưa có attendance
+                date: {
+                    lt: now, // Ca đã qua
+                },
+            },
+        });
+
+        // Đánh ABSENT cho từng ca
+        for (const shift of missedShifts) {
+            const shiftEnd = this.combineDateTime(shift.date, shift.endTime);
+            
+            // Chỉ đánh ABSENT nếu ca đã kết thúc
+            if (now > shiftEnd) {
+                await this.prisma.attendance.create({
+                    data: {
+                        shiftId: shift.id,
+                        employeeId,
+                        checkInTime: null,
+                        checkOutTime: null,
+                        status: 'ABSENT',
+                        notes: 'Automatically marked absent due to no check-in',
+                    },
+                });
+            }
+        }
     }
 
     /**

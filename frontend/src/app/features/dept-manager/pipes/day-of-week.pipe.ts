@@ -38,8 +38,8 @@ export class DayOfWeekPipe implements PipeTransform {
 }
 
 /**
- * Pipe để chuyển đổi number (1-7) sang tên ngày
- * Usage: {{ 1 | dayOfWeekNumber }} => 'Thứ 2'
+ * Pipe to convert number (1-7) to day name
+ * Usage: {{ 1 | dayOfWeekNumber }} => 'Monday'
  */
 @Pipe({
   name: 'dayOfWeekNumber',
@@ -47,23 +47,23 @@ export class DayOfWeekPipe implements PipeTransform {
 })
 export class DayOfWeekNumberPipe implements PipeTransform {
   private readonly dayNames: Record<number, string> = {
-    1: 'Thứ 2',
-    2: 'Thứ 3',
-    3: 'Thứ 4',
-    4: 'Thứ 5',
-    5: 'Thứ 6',
-    6: 'Thứ 7',
-    7: 'Chủ nhật'
+    1: 'Monday',
+    2: 'Tuesday',
+    3: 'Wednesday',
+    4: 'Thursday',
+    5: 'Friday',
+    6: 'Saturday',
+    7: 'Sunday'
   };
 
   private readonly shortDayNames: Record<number, string> = {
-    1: 'T2',
-    2: 'T3',
-    3: 'T4',
-    4: 'T5',
-    5: 'T6',
-    6: 'T7',
-    7: 'CN'
+    1: 'Mon',
+    2: 'Tue',
+    3: 'Wed',
+    4: 'Thu',
+    5: 'Fri',
+    6: 'Sat',
+    7: 'Sun'
   };
 
   transform(value: number | null | undefined, format: 'short' | 'long' = 'long'): string {

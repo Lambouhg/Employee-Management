@@ -54,7 +54,6 @@ export class DeptManagerLayoutComponent implements OnInit {
     { label: 'Assign Shifts', icon: UserCheck, route: '/dept-manager/shift-assignment' },
     { label: 'Approve Shifts', icon: CheckSquare, route: '/dept-manager/shift-registrations' },
     { label: 'Leave Requests', icon: CalendarX, route: '/dept-manager/leaves' },
-    { label: 'Shift Templates', icon: FileText, route: '/dept-manager/templates' },
     { label: 'Staff Schedules', icon: ClipboardList, route: '/dept-manager/schedules' }
   ];
 

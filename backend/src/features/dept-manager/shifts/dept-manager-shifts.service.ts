@@ -3,25 +3,26 @@ import { PrismaService } from '../../../common/database/prisma.service';
 import { AssignShiftDto, EmployeeAssignmentInfoDto } from './dto';
 import { getDayOfWeekEnum, dayOfWeekToNumber, getStartOfWeek } from '../../../common/utils/date.util';
 import { EmploymentType } from '@prisma/client';
+import { parseISO } from 'date-fns';
 
 @Injectable()
 export class DeptManagerShiftsService {
     constructor(private readonly prisma: PrismaService) { }
 
     /**
-     * Gán ca làm việc cho nhân viên
+     * Assign shift to employee
      * Business Rules:
-     * - Chỉ gán cho nhân viên trong phòng ban của mình
-     * - Không gán trùng ca (employeeId + date + shiftType)
-     * - Opening phải thuộc plan của phòng ban
-     * - Nhân viên không nghỉ phép ngày đó
-     * - Full-time: không gán vào fixedDayOff, tối đa 6 ca/tuần
-     * - Part-time: tối đa 5 ca/tuần, kiểm tra capacity của opening
+     * - Only assign to employees in own department
+     * - No duplicate shifts (employeeId + date + shiftType)
+     * - Opening must belong to department plan
+     * - Employee not on leave that day
+     * - Full-time: no assignment on fixedDayOff, max 6 shifts/week
+     * - Part-time: max 5 shifts/week, check opening capacity
      */
     async assignShift(currentUser: any, planId: string, dto: AssignShiftDto) {
         const department = await this.getManagedDepartment(currentUser.id);
 
-        // 1. Validate plan thuộc phòng ban
+        // 1. Validate plan belongs to department
         const plan = await this.prisma.deptWeeklyPlan.findFirst({
             where: {
                 id: planId,
@@ -30,10 +31,10 @@ export class DeptManagerShiftsService {
         });
 
         if (!plan) {
-            throw new NotFoundException('Plan không tồn tại hoặc không thuộc phòng ban của bạn');
+            throw new NotFoundException('Plan not found or does not belong to your department');
         }
 
-        // 2. Validate opening thuộc plan
+        // 2. Validate opening belongs to plan
         const opening = await this.prisma.shiftOpening.findFirst({
             where: {
                 id: dto.openingId,
@@ -42,53 +43,75 @@ export class DeptManagerShiftsService {
         });
 
         if (!opening) {
-            throw new NotFoundException('Shift opening không tồn tại trong plan này');
+            throw new NotFoundException('Shift opening not found in this plan');
         }
 
-        // 3. Validate employee thuộc phòng ban
+        // 3. Validate employee belongs to department
         const employee = await this.prisma.user.findFirst({
             where: {
                 id: dto.employeeId,
                 departmentId: department.id,
                 isActive: true
+            },
+            select: {
+                id: true,
+                fullName: true,
+                email: true,
+                employmentType: true,
+                fixedDayOff: true  // IMPORTANT: Must explicitly select this field
             }
         });
 
         if (!employee) {
-            throw new NotFoundException('Nhân viên không tồn tại hoặc không thuộc phòng ban của bạn');
+            throw new NotFoundException('Employee not found or does not belong to your department');
         }
 
-        // 3.1. Validate Full-time: không gán vào fixedDayOff
+        // 3.1. Validate Full-time: no assignment on fixedDayOff
         if (employee.employmentType === 'FULL_TIME' && employee.fixedDayOff) {
-            const shiftDayOfWeek = getDayOfWeekEnum(new Date(dto.date));
+            // Parse date properly to avoid timezone issues
+            const dateStr = dto.date.split('T')[0]; // Extract YYYY-MM-DD only
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            const shiftDayOfWeek = getDayOfWeekEnum(localDate);
+            
+            // Detailed logging for debugging
+            console.log('='.repeat(80));
+            console.log('[FIXED DAY OFF VALIDATION]');
+            console.log(`  Employee: ${employee.fullName}`);
+            console.log(`  Fixed Day Off: ${employee.fixedDayOff}`);
+            console.log(`  Shift Date: ${dateStr} (${shiftDayOfWeek})`);
+            console.log(`  Date Object: ${localDate.toDateString()}`);
+            console.log(`  Match: ${shiftDayOfWeek === employee.fixedDayOff ? 'YES - BLOCKING' : 'NO - ALLOWED'}`);
+            console.log('='.repeat(80));
+            
             if (shiftDayOfWeek === employee.fixedDayOff) {
                 const dayNumber = dayOfWeekToNumber(employee.fixedDayOff);
-                const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 throw new BadRequestException(
-                    `${employee.fullName} nghỉ cố định vào ${dayNames[dayNumber! % 7]}. Không thể gán ca vào ngày này.`
+                    `${employee.fullName} has fixed day off on ${dayNames[dayNumber! % 7]}. Cannot assign shift on this day.`
                 );
             }
         }
 
-        // 3.2. Validate Part-time: kiểm tra capacity của opening
+        // 3.2. Validate Part-time: check opening capacity
         if (employee.employmentType === 'PART_TIME') {
             if (!opening.isPTEnabled) {
-                throw new BadRequestException('Ca này không mở cho nhân viên Part-time');
+                throw new BadRequestException('This shift is not open for Part-time employees');
             }
 
             if (opening.ptRegistered >= opening.ptCapacity) {
                 throw new BadRequestException(
-                    `Ca này đã đủ Part-time (${opening.ptRegistered}/${opening.ptCapacity})`
+                    `This shift is full for Part-time (${opening.ptRegistered}/${opening.ptCapacity})`
                 );
             }
         }
 
-        // 3.3. Validate Full-time: kiểm tra opening có mở cho FT không
+        // 3.3. Validate Full-time: check if opening is enabled for FT
         if (employee.employmentType === 'FULL_TIME' && !opening.isFTEnabled) {
-            throw new BadRequestException('Ca này không mở cho nhân viên Full-time');
+            throw new BadRequestException('This shift is not open for Full-time employees');
         }
 
-        // 4. Kiểm tra số ca đã gán trong tuần
+        // 4. Check number of assigned shifts in the week
         const weekStart = getStartOfWeek(new Date(dto.date));
         const existingShiftsInWeek = await this.prisma.shift.count({
             where: {
@@ -100,17 +123,18 @@ export class DeptManagerShiftsService {
             }
         });
 
-        // Full-time: tối đa 6 ca/tuần (nghỉ 1 ngày)
-        // Part-time: tối đa 5 ca/tuần
+        // Full-time: max 6 shifts/week (1 day off)
+        // Part-time: max 5 shifts/week
         const maxShiftsPerWeek = employee.employmentType === 'FULL_TIME' ? 6 : 5;
         if (existingShiftsInWeek >= maxShiftsPerWeek) {
             throw new BadRequestException(
-                `${employee.fullName} đã đủ ${maxShiftsPerWeek} ca trong tuần (${employee.employmentType === 'FULL_TIME' ? 'Full-time' : 'Part-time'})`
+                `${employee.fullName} already has ${maxShiftsPerWeek} shifts this week (${employee.employmentType === 'FULL_TIME' ? 'Full-time' : 'Part-time'})`
             );
         }
 
-        // 5. Kiểm tra nhân viên có nghỉ phép ngày đó không
-        const shiftDate = new Date(dto.date);
+        // 5. Check if employee has approved leave on that day
+        // Use parseISO to avoid timezone issues when comparing dates
+        const shiftDate = parseISO(dto.date);
         const approvedLeave = await this.prisma.leaveRequest.findFirst({
             where: {
                 employeeId: dto.employeeId,
@@ -122,12 +146,12 @@ export class DeptManagerShiftsService {
 
         if (approvedLeave) {
             throw new BadRequestException(
-                `${employee.fullName} đã được duyệt nghỉ phép từ ${new Date(approvedLeave.startDate).toLocaleDateString('vi-VN')} ` +
-                `đến ${new Date(approvedLeave.endDate).toLocaleDateString('vi-VN')}`
+                `${employee.fullName} has approved leave from ${new Date(approvedLeave.startDate).toLocaleDateString('en-US')} ` +
+                `to ${new Date(approvedLeave.endDate).toLocaleDateString('en-US')}`
             );
         }
 
-        // Cảnh báo nếu có nghỉ phép đang chờ duyệt (không block nhưng log warning)
+        // Warning if pending leave exists (not blocking but log warning)
         const pendingLeave = await this.prisma.leaveRequest.findFirst({
             where: {
                 employeeId: dto.employeeId,
@@ -139,10 +163,10 @@ export class DeptManagerShiftsService {
 
         if (pendingLeave) {
             console.warn(
-                `[LEAVE WARNING] ${employee.fullName} có yêu cầu nghỉ phép đang chờ duyệt ` +
-                `từ ${new Date(pendingLeave.startDate).toLocaleDateString('vi-VN')} ` +
-                `đến ${new Date(pendingLeave.endDate).toLocaleDateString('vi-VN')}. ` +
-                `Ca làm vẫn được gán nhưng có thể conflict sau khi duyệt.`
+                `[LEAVE WARNING] ${employee.fullName} has pending leave request ` +
+                `from ${new Date(pendingLeave.startDate).toLocaleDateString('en-US')} ` +
+                `to ${new Date(pendingLeave.endDate).toLocaleDateString('en-US')}. ` +
+                `Shift assigned but may conflict if leave is approved.`
             );
         }
 

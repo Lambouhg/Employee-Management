@@ -87,6 +87,6 @@ export class StaffLeavesController {
         @Param('id', ParseUUIDPipe) id: string
     ): Promise<{ message: string }> {
         await this.leavesService.deleteLeaveRequest(user.id, id);
-        return { message: 'Đã hủy yêu cầu nghỉ phép thành công' };
+        return { message: 'Leave request cancelled successfully' };
     }
 }

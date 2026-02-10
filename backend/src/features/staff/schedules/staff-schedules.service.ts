@@ -54,16 +54,16 @@ export class StaffSchedulesService {
             });
 
             if (!opening || opening.plan.status !== 'PUBLISHED') {
-                throw new NotFoundException('Ca làm việc không khả dụng');
+                throw new NotFoundException('Shift is not available');
             }
 
             if (!opening.isPTEnabled) {
-                throw new BadRequestException('Ca này không mở cho nhân viên Part-time');
+                throw new BadRequestException('This shift is not open for Part-time employees');
             }
 
             // 1. Check capacity
             if (opening.ptRegistered >= opening.ptCapacity) {
-                throw new BadRequestException('Ca này đã hết chỗ');
+                throw new BadRequestException('This shift is full');
             }
 
             // 2. Check if user already has a shift on this date
@@ -75,7 +75,7 @@ export class StaffSchedulesService {
             });
 
             if (existingUserShift) {
-                throw new BadRequestException('Bạn đã có ca làm việc trong ngày này');
+                throw new BadRequestException('You already have a shift on this date');
             }
 
             // 3. Check weekly limit (5 shifts for PT)
@@ -87,7 +87,7 @@ export class StaffSchedulesService {
             });
 
             if (weekShifts >= 5) {
-                throw new BadRequestException('Bạn đã đăng ký tối đa 5 ca trong tuần này');
+                throw new BadRequestException('You have reached the maximum of 5 shifts for this week');
             }
 
             // 4. Update opening registration count atomically

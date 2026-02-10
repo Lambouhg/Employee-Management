@@ -34,7 +34,7 @@ export class MyRegistrationsComponent implements OnInit {
         return this.shiftService.getMyRegistrations(query);
       }),
       catchError(error => {
-        this.errorMessage = 'Không thể tải danh sách đăng ký';
+        this.errorMessage = 'Unable to load registrations';
         return of([]);
       })
     );
@@ -45,7 +45,7 @@ export class MyRegistrationsComponent implements OnInit {
   }
 
   cancelRegistration(registration: ShiftRegistration) {
-    if (!confirm(`Hủy đăng ký ca ${this.getShiftTypeLabel(registration.opening?.shiftType || '')}?`)) {
+    if (!confirm(`Cancel ${this.getShiftTypeLabel(registration.opening?.shiftType || '')} shift registration?`)) {
       return;
     }
 
@@ -54,13 +54,13 @@ export class MyRegistrationsComponent implements OnInit {
 
     this.shiftService.cancelRegistration(registration.id).subscribe({
       next: () => {
-        this.successMessage = 'Đã hủy đăng ký ca thành công!';
+        this.successMessage = 'Registration canceled successfully!';
         this.refreshSubject.next();
         this.isCancelling = false;
         setTimeout(() => this.successMessage = '', 3000);
       },
       error: (error) => {
-        this.errorMessage = error.error?.message || 'Không thể hủy đăng ký';
+        this.errorMessage = error.error?.message || 'Unable to cancel registration';
         this.isCancelling = false;
       }
     });
@@ -68,9 +68,9 @@ export class MyRegistrationsComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'PENDING': 'Chờ duyệt',
-      'APPROVED': 'Đã duyệt',
-      'REJECTED': 'Bị từ chối'
+      'PENDING': 'Pending',
+      'APPROVED': 'Approved',
+      'REJECTED': 'Rejected'
     };
     return labels[status] || status;
   }
@@ -86,10 +86,10 @@ export class MyRegistrationsComponent implements OnInit {
 
   getShiftTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'MORNING': 'Sáng',
-      'AFTERNOON': 'Chiều',
-      'EVENING': 'Tối',
-      'NIGHT': 'Đêm'
+      'MORNING': 'Morning',
+      'AFTERNOON': 'Afternoon',
+      'EVENING': 'Evening',
+      'NIGHT': 'Night'
     };
     return labels[type] || type;
   }

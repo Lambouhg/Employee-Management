@@ -1,3 +1,9 @@
+// ============ Attendance Models ============
+import { ShiftType } from './schedule.model';
+
+// Re-export for convenience
+export { ShiftType } from './schedule.model';
+
 export enum AttendanceStatus {
   PRESENT = 'PRESENT',
   ABSENT = 'ABSENT',
@@ -79,13 +85,6 @@ export interface AttendanceReport {
 
 // ============ Staff Attendance Models ============
 
-export enum ShiftType {
-  MORNING = 'MORNING',
-  AFTERNOON = 'AFTERNOON',
-  EVENING = 'EVENING',
-  NIGHT = 'NIGHT'
-}
-
 export interface ShiftInfo {
   id: string;
   date: string;
@@ -93,6 +92,23 @@ export interface ShiftInfo {
   startTime: string;
   endTime: string;
   notes?: string;
+}
+
+export interface ShiftWithAttendance {
+  id: string;
+  date: string;
+  shiftType: ShiftType;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  attendance?: {
+    id: string;
+    checkInTime: string | null;
+    status: AttendanceStatus;
+    notes: string | null;
+  };
+  canCheckIn: boolean;
+  message: string;
 }
 
 export interface AttendanceInfo {
@@ -106,10 +122,8 @@ export interface AttendanceInfo {
 
 export interface TodayAttendance {
   hasShift: boolean;
-  shift?: ShiftInfo;
-  attendance?: AttendanceInfo;
-  canCheckIn: boolean;
-  message?: string;
+  shifts: ShiftWithAttendance[];
+  message: string;
 }
 
 export interface AttendanceRecord {
@@ -140,6 +154,7 @@ export interface AttendanceHistory {
 }
 
 export interface CheckInRequest {
+  shiftId: string;
   notes?: string;
 }
 

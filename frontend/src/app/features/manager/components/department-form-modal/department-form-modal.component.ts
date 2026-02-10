@@ -1,7 +1,7 @@
 import { Component, inject, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DepartmentService } from '@core/services/department.service';
+import { DepartmentService } from '../../services/department.service';
 import { DepartmentDetail } from '@core/models/department.model';
 import { LucideAngularModule, X, Info, Building2, Hash, FileText } from 'lucide-angular';
 

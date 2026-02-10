@@ -14,6 +14,10 @@ export const MANAGER_ROUTES: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      // {
+      //   path: 'shift-overview',
+      //   loadComponent: () => import('./pages/shift-overview/shift-overview.component').then(m => m.ShiftOverviewComponent)
+      // },
       {
         path: 'employees',
         loadComponent: () => import('./pages/employee-list/employee-list.component').then(m => m.EmployeeListComponent)

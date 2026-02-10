@@ -1,8 +1,8 @@
 <div class="max-w-7xl mx-auto">
   <!-- Header -->
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-2">Gán ca làm việc cho nhân viên</h1>
-    <p class="text-gray-600">Chọn plan và gán nhân viên vào các ca làm việc</p>
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Assign Shifts to Employees</h1>
+    <p class="text-gray-600">Select a plan and assign employees to shifts</p>
   </div>
 
  <!-- Messages -->
@@ -21,7 +21,7 @@
 
   <!-- Plan Selector -->
   <div class="mb-6 bg-white rounded-lg shadow p-4">
-    <label class="block text-sm font-semibold text-gray-700 mb-2">Chọn tuần làm việc:</label>
+    <label class="block text-sm font-semibold text-gray-700 mb-2">Select work week:</label>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <button
         *ngFor="let plan of plans$ | async"
@@ -32,7 +32,7 @@
           'border-gray-200 hover:border-blue-300': (selectedPlan$ | async)?.id !== plan.id
         }">
         <div class="font-semibold text-gray-900">
-          Tuần {{ plan.weekStartDate | date: 'dd/MM/yyyy' }}
+          Week {{ plan.weekStartDate | date: 'dd/MM/yyyy' }}
         </div>
         <div class="text-xs mt-1">
           <span class="px-2 py-0.5 rounded-full text-xs font-medium" [ngClass]="getStatusClass(plan.status)">
@@ -48,9 +48,9 @@
     <div class="grid grid-cols-7 border-b">
       <div *ngFor="let day of getWeekDays(selectedPlan); let i = index"
            class="p-3 text-center border-r last:border-r-0"
-           [ngClass]="{'bg-blue-50': i === 0 || i === 6}">
+           [ngClass]="{'bg-blue-50': getDayOfWeek(day) === 0 || getDayOfWeek(day) === 6}">
         <div class="text-xs font-semibold text-gray-600">
-          {{ ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][i] }}
+          {{ getDayLabel(day) }}
         </div>
         <div class="text-sm font-bold text-gray-900 mt-1">
           {{ day | date: 'dd/MM' }}
@@ -61,7 +61,7 @@
     <div class="grid grid-cols-7 min-h-[500px]">
       <div *ngFor="let day of getWeekDays(selectedPlan); let i = index"
            class="border-r last:border-r-0 p-2"
-           [ngClass]="{'bg-gray-50': i === 0 || i === 6}">
+           [ngClass]="{'bg-gray-50': getDayOfWeek(day) === 0 || getDayOfWeek(day) === 6}">
 
         <div *ngFor="let shift of getShiftsForDay(day)"
              class="mb-2 border rounded-lg p-2 cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all"
@@ -99,7 +99,7 @@
     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
     </svg>
-    <p class="mt-2">Chọn một tuần để xem và gán ca làm việc</p>
+    <p class="mt-2">Select a week to view and assign shifts</p>
   </div>
 </div>
 
@@ -116,7 +116,7 @@
       <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 shrink-0">
         <div class="flex items-center justify-between">
           <div class="flex-1 min-w-0">
-            <h3 class="text-lg font-bold text-white">Chi tiết ca làm việc</h3>
+            <h3 class="text-lg font-bold text-white">Shift Details</h3>
             <div class="flex items-center gap-3 mt-1.5">
               <p class="text-blue-100 text-sm">
                 {{ getShiftTypeLabel(selectedShiftOpening.shiftType) }}
@@ -143,9 +143,9 @@
         <!-- Assigned Employees Section -->
         <div class="p-5 border-b bg-gray-50">
           <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-bold text-gray-900">Nhân viên đã gán</h4>
+            <h4 class="text-sm font-bold text-gray-900">Assigned Employees</h4>
             <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-              {{ selectedShiftOpening?.shifts?.length || 0 }} người
+              {{ selectedShiftOpening?.shifts?.length || 0 }} people
             </span>
           </div>
 
@@ -167,7 +167,7 @@
               <button
                 (click)="unassignShift(assignedShift.id)"
                 class="ml-3 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                title="Xóa khỏi ca">
+                title="Remove from shift">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
@@ -180,13 +180,13 @@
             <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
-            <p class="mt-2 text-sm">Chưa có nhân viên nào được gán</p>
+            <p class="mt-2 text-sm">No employees assigned yet</p>
           </div>
         </div>
 
         <!-- Add Employee Section -->
         <div class="p-5">
-          <h4 class="text-sm font-bold text-gray-900 mb-3">Gán thêm nhân viên</h4>
+          <h4 class="text-sm font-bold text-gray-900 mb-3">Assign Employees</h4>
 
           <!-- Filter Tabs -->
           <div class="flex gap-2 mb-4 border-b">
@@ -197,7 +197,7 @@
                 'border-blue-600 text-blue-600': (employeeFilter$ | async) === 'ALL',
                 'border-transparent text-gray-500 hover:text-gray-700': (employeeFilter$ | async) !== 'ALL'
               }">
-              Tất cả ({{ getEmployeeCount('ALL') | async }})
+              All ({{ getEmployeeCount('ALL') | async }})
             </button>
             <button
               (click)="setEmployeeFilter('FULL_TIME')"
@@ -223,7 +223,7 @@
 
           <div *ngIf="isLoadingEmployees" class="text-center py-8 text-gray-500">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p class="mt-2 text-sm">Đang tải...</p>
+            <p class="mt-2 text-sm">Loading...</p>
           </div>
 
           <div *ngIf="!isLoadingEmployees" class="space-y-2">
@@ -254,7 +254,7 @@
                   <!-- Fixed Day Off Badge (Full-time only) -->
                   <span *ngIf="employee.employmentType === 'FULL_TIME' && employee.fixedDayOffNumber"
                         class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                    Nghỉ: {{ employee.fixedDayOffNumber | dayOfWeekNumber: 'short' }}
+                    Off: {{ employee.fixedDayOffNumber | dayOfWeekNumber: 'short' }}
                   </span>
 
                   <!-- Weekly Stats Badge -->
@@ -264,7 +264,7 @@
                           'bg-green-100 text-green-700': employee.weeklyStats.canAssignMore,
                           'bg-red-100 text-red-700': !employee.weeklyStats.canAssignMore
                         }">
-                    {{ employee.weeklyStats.totalShiftsAssigned }}/{{ employee.weeklyStats.maxShiftsPerWeek }} ca
+                    {{ employee.weeklyStats.totalShiftsAssigned }}/{{ employee.weeklyStats.maxShiftsPerWeek }} shifts
                   </span>
                 </div>
 
@@ -285,7 +285,7 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
-                Gán
+                Assign
               </button>
             </div>
 
@@ -295,9 +295,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <p class="mt-2 text-sm">
-                <span *ngIf="(employeeFilter$ | async) === 'ALL'">Tất cả nhân viên đã được gán vào ca này</span>
-                <span *ngIf="(employeeFilter$ | async) === 'FULL_TIME'">Không có nhân viên Full-time khả dụng</span>
-                <span *ngIf="(employeeFilter$ | async) === 'PART_TIME'">Không có nhân viên Part-time khả dụng</span>
+                <span *ngIf="(employeeFilter$ | async) === 'ALL'">All employees have been assigned to this shift</span>
+                <span *ngIf="(employeeFilter$ | async) === 'FULL_TIME'">No full-time employees available</span>
+                <span *ngIf="(employeeFilter$ | async) === 'PART_TIME'">No part-time employees available</span>
               </p>
             </div>
           </div>
@@ -310,7 +310,7 @@
         <button
           (click)="closeShiftDetail()"
           class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-          Đóng
+          Close
         </button>
       </div>
   </div>

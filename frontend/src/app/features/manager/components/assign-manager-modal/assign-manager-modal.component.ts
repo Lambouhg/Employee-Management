@@ -1,8 +1,8 @@
 import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DepartmentService } from '@core/services/department.service';
-import { ManagerService } from '@core/services/manager.service';
+import { DepartmentService } from '../../services/department.service';
+import { ManagerService } from '../../services/manager.service';
 import { Department } from '@core/models/department.model';
 import { LucideAngularModule, X, UserCog, Check, Info } from 'lucide-angular';
 

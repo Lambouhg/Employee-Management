@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { DeptManagerLeavesService } from '../../services/dept-manager-leaves.service';
+import { DeptManagerLeavesService } from '../../services/leaves.service';
 import { DeptLeaveRequestDetail } from '../../models/leave.model';
 
 @Component({

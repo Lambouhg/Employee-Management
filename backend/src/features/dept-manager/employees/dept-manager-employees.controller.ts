@@ -44,7 +44,14 @@ export class DeptManagerEmployeesController {
       @Request() req: { user: ICurrentUser },
       @Query('weekStartDate') weekStartDate?: string
     ): Promise<EmployeeSelectionDto[]> {
-        const weekStart = weekStartDate ? new Date(weekStartDate) : undefined;
+        // Parse date properly to avoid timezone issues
+        let weekStart: Date | undefined = undefined;
+        if (weekStartDate) {
+            // Extract YYYY-MM-DD and create local date at 00:00:00
+            const dateStr = weekStartDate.split('T')[0];
+            const [year, month, day] = dateStr.split('-').map(Number);
+            weekStart = new Date(year, month - 1, day);
+        }
         return this.employeesService.getSelectionList(req.user, weekStart);
     }
 

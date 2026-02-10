@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay } from 'rxjs';
-import { DeptManagerDashboardService } from '../../dashboard/dashboard.service';
+import { DeptManagerDashboardService } from '../../services/dashboard.service';
 import {
   CompleteDashboardDto,
   AlertDto,
@@ -11,14 +11,11 @@ import {
   EmployeeWorkloadDto,
   RecentActivityDto,
 } from '../../../../core/models/dashboard.model';
-import { DashboardHeaderComponent } from './components/dashboard-header/dashboard-header.component';
-import { MetricsCardsComponent } from './components/metrics-cards/metrics-cards.component';
-import { EmployeeTableComponent } from './components/employee-table/employee-table.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, DashboardHeaderComponent, MetricsCardsComponent, EmployeeTableComponent],
+  imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })

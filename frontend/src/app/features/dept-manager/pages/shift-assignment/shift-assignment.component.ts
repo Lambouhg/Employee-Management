@@ -1,9 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DeptManagerPlansService } from '../../services/dept-manager-plans.service';
-import { DeptManagerShiftsService } from '../../services/dept-manager-shifts.service';
-import { DeptManagerEmployeesService } from '../../services/dept-manager-employees.service';
+import { DeptManagerPlansService } from '../../services/plans.service';
+import { DeptManagerShiftsService } from '../../services/shifts.service';
+import { DeptManagerEmployeesService } from '../../services/employees.service';
 import { DeptWeeklyPlan, ShiftOpening, ShiftType } from '@core/models/schedule.model';
 import { EmployeeSelection } from '../../models/employee.model';
 import { Observable, BehaviorSubject, switchMap, tap, catchError, of, map, shareReplay, combineLatest } from 'rxjs';
@@ -69,7 +69,7 @@ export class ShiftAssignmentComponent implements OnInit {
         }
       }),
       catchError(error => {
-        this.errorMessage = 'Không thể tải danh sách plans';
+        this.errorMessage = 'Cannot load plans list';
         return of([]);
       })
     );
@@ -87,7 +87,7 @@ export class ShiftAssignmentComponent implements OnInit {
         this.isLoadingEmployees = false;
       },
       error: (error) => {
-        this.errorMessage = 'Không thể tải danh sách nhân viên';
+        this.errorMessage = 'Cannot load employee list';
         this.isLoadingEmployees = false;
       }
     });
@@ -106,7 +106,7 @@ export class ShiftAssignmentComponent implements OnInit {
         this.selectedPlanSubject.next(fullPlan);
       },
       error: (error) => {
-        this.errorMessage = 'Không thể tải chi tiết plan';
+        this.errorMessage = 'Cannot load plan details';
       }
     });
   }
@@ -174,15 +174,41 @@ export class ShiftAssignmentComponent implements OnInit {
   /**
    * Check if employee can be assigned based on fixedDayOff
    */
-  canAssignEmployee(employee: EmployeeSelection, shiftDate: Date): boolean {
+  canAssignEmployee(employee: EmployeeSelection, shiftDate: Date | string): boolean {
     if (employee.employmentType !== 'FULL_TIME' || !employee.fixedDayOffNumber) {
       return true;
     }
 
+    // Parse date string properly to avoid timezone issues
+    let dateStr: string;
+    if (typeof shiftDate === 'string') {
+      dateStr = shiftDate.split('T')[0]; // "2026-02-17T00:00:00.000Z" → "2026-02-17"
+    } else {
+      // Convert Date object to YYYY-MM-DD using local date components
+      const year = shiftDate.getFullYear();
+      const month = String(shiftDate.getMonth() + 1).padStart(2, '0');
+      const day = String(shiftDate.getDate()).padStart(2, '0');
+      dateStr = `${year}-${month}-${day}`;
+    }
+    
+    // Extract year, month, day directly from YYYY-MM-DD string
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day); // Create local date without timezone conversion
+    
     // Get day of week (0 = Sunday, 6 = Saturday)
-    const dayOfWeek = shiftDate.getDay();
+    const dayOfWeek = localDate.getDay();
     // Convert to Monday = 1, Sunday = 7
     const normalizedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+    // Debug logging
+    console.log('[FE FIXED DAY OFF CHECK]', {
+      employee: employee.fullName,
+      shiftDate: dateStr,
+      dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
+      normalizedDay,
+      fixedDayOffNumber: employee.fixedDayOffNumber,
+      canAssign: normalizedDay !== employee.fixedDayOffNumber
+    });
 
     return normalizedDay !== employee.fixedDayOffNumber;
   }
@@ -191,16 +217,17 @@ export class ShiftAssignmentComponent implements OnInit {
    * Get warning message if employee cannot be assigned
    */
   getAssignmentWarning(employee: EmployeeSelection, shiftDate: Date | string): string | null {
-    const date = typeof shiftDate === 'string' ? new Date(shiftDate) : shiftDate;
+    // Use the same date parsing logic to ensure consistency
+    const date = shiftDate; // Pass directly to canAssignEmployee
     
     // Check fixedDayOff
     if (!this.canAssignEmployee(employee, date)) {
-      return `Nhân viên này nghỉ cố định vào ngày này`;
+      return `Employee has fixed day off on this day`;
     }
 
     // Check weekly stats
     if (employee.weeklyStats && !employee.weeklyStats.canAssignMore) {
-      return `Đã đủ ${employee.weeklyStats.maxShiftsPerWeek} ca trong tuần`;
+      return `Already assigned ${employee.weeklyStats.maxShiftsPerWeek} shifts this week`;
     }
 
     return null;
@@ -234,7 +261,7 @@ export class ShiftAssignmentComponent implements OnInit {
 
     this.shiftsService.assignShift(currentPlan.id, dto).subscribe({
       next: () => {
-        this.successMessage = 'Đã gán ca thành công!';
+        this.successMessage = 'Shift assigned successfully!';
         // Reload plan data and employees with fresh statistics
         this.loadEmployees(currentPlan.weekStartDate.toString());
         this.shiftsService.getAssignedShifts(currentPlan.id).subscribe({
@@ -254,7 +281,7 @@ export class ShiftAssignmentComponent implements OnInit {
         setTimeout(() => this.successMessage = '', 3000);
       },
       error: (error) => {
-        this.errorMessage = error.error?.message || 'Không thể gán ca';
+        this.errorMessage = error.error?.message || 'Cannot assign shift';
         this.isAssigning = false;
       }
     });
@@ -265,11 +292,11 @@ export class ShiftAssignmentComponent implements OnInit {
     const currentShift = this.selectedShiftOpeningSubject.value;
     if (!currentPlan) return;
 
-    if (!confirm('Xóa nhân viên khỏi ca này?')) return;
+    if (!confirm('Remove employee from this shift?')) return;
 
     this.shiftsService.unassignShift(currentPlan.id, shiftId).subscribe({
       next: () => {
-        this.successMessage = 'Đã xóa nhân viên khỏi ca!';
+        this.successMessage = 'Employee removed from shift!';
         // Reload plan data and employees with fresh statistics
         this.loadEmployees(currentPlan.weekStartDate.toString());
         this.shiftsService.getAssignedShifts(currentPlan.id).subscribe({
@@ -285,7 +312,7 @@ export class ShiftAssignmentComponent implements OnInit {
         setTimeout(() => this.successMessage = '', 3000);
       },
       error: (error) => {
-        this.errorMessage = error.error?.message || 'Không thể xóa';
+        this.errorMessage = error.error?.message || 'Cannot remove employee';
       }
     });
   }
@@ -293,34 +320,65 @@ export class ShiftAssignmentComponent implements OnInit {
   getWeekDays(plan: DeptWeeklyPlan | null): Date[] {
     if (!plan) return [];
 
-    const start = new Date(plan.weekStartDate);
+    // Parse weekStartDate correctly - backend returns Monday already
+    const dateStr = plan.weekStartDate.toString().split('T')[0]; // Get YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-').map(Number);
+    
+    // Create local date for Monday (weekStartDate from backend is already Monday)
+    const monday = new Date(year, month - 1, day);
+    
+    // Generate 7 days starting from Monday
     const days: Date[] = [];
-
     for (let i = 0; i < 7; i++) {
-      const day = new Date(start);
-      day.setDate(start.getDate() + i);
-      days.push(day);
+      const currentDay = new Date(monday);
+      currentDay.setDate(monday.getDate() + i);
+      days.push(currentDay);
     }
-
     return days;
+  }
+
+  /**
+   * Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+   */
+  getDayOfWeek(date: Date): number {
+    return date.getDay();
+  }
+
+  /**
+   * Get day label based on actual day of week
+   */
+  getDayLabel(date: Date): string {
+    // Thứ tự tuần: Thứ 2 -> Chủ nhật
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // Tìm thứ tự của ngày trong tuần tính từ Thứ 2
+    let dayIndex = date.getDay() - 1;
+    if (dayIndex < 0) dayIndex = 6; // Nếu là Chủ nhật (0), chuyển về cuối tuần
+    return dayLabels[dayIndex];
   }
 
   getShiftsForDay(date: Date): ShiftOpening[] {
     const currentPlan = this.selectedPlanSubject.value;
     if (!currentPlan?.shiftOpenings) return [];
 
-    const dateStr = date.toISOString().split('T')[0];
-    return currentPlan.shiftOpenings.filter(shift =>
-      shift.date.toString().split('T')[0] === dateStr
-    );
+    // Convert local date to YYYY-MM-DD format for comparison
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    return currentPlan.shiftOpenings.filter(shift => {
+      // Extract YYYY-MM-DD from shift.date (which might be ISO string)
+      const shiftDateStr = shift.date.toString().split('T')[0];
+      return shiftDateStr === dateStr;
+    });
   }
 
   getShiftTypeLabel(type: ShiftType): string {
     const labels: Record<ShiftType, string> = {
-      [ShiftType.MORNING]: 'Sáng',
-      [ShiftType.AFTERNOON]: 'Chiều',
-      [ShiftType.EVENING]: 'Tối',
-      [ShiftType.NIGHT]: 'Đêm'
+      [ShiftType.MORNING]: 'Morning',
+      [ShiftType.AFTERNOON]: 'Afternoon',
+      [ShiftType.EVENING]: 'Evening',
+      [ShiftType.NIGHT]: 'Night'
     };
     return labels[type] || type;
   }
@@ -355,9 +413,9 @@ export class ShiftAssignmentComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'DRAFT': 'Nháp',
-      'PUBLISHED': 'Đã công bố',
-      'LOCKED': 'Đã khóa'
+      'DRAFT': 'Draft',
+      'PUBLISHED': 'Published',
+      'LOCKED': 'Locked'
     };
     return labels[status] || status;
   }
@@ -370,5 +428,36 @@ export class ShiftAssignmentComponent implements OnInit {
 
   isEmployeeAssigned(employeeId: string, shiftOpening: ShiftOpening): boolean {
     return shiftOpening.shifts?.some(s => s.employeeId === employeeId) || false;
+  }
+
+  /**
+   * Get count of employees with specific attendance status
+   */
+  getAttendanceCount(shift: ShiftOpening, status: string): number {
+    if (!shift.shifts) return 0;
+    return shift.shifts.filter(s => {
+      const attendance = (s as any).attendance;
+      return attendance && attendance.status === status;
+    }).length;
+  }
+
+  /**
+   * Get count of employees who haven't checked in yet
+   */
+  getPendingCount(shift: ShiftOpening): number {
+    if (!shift.shifts) return 0;
+    return shift.shifts.filter(s => {
+      const attendance = (s as any).attendance;
+      return !attendance;
+    }).length;
+  }
+
+  /**
+   * Get attendance rate for a shift opening
+   */
+  getAttendanceRate(shift: ShiftOpening): number {
+    if (!shift.shifts || shift.shifts.length === 0) return 0;
+    const attended = this.getAttendanceCount(shift, 'PRESENT') + this.getAttendanceCount(shift, 'LATE');
+    return Math.round((attended / shift.shifts.length) * 100);
   }
 }

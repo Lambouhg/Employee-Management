@@ -2,7 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, Mail, Phone, Briefcase, Calendar, Users, Building2, UserCog, Shield, Edit, Trash2, UserCheck, UserX, RefreshCw } from 'lucide-angular';
-import { ManagerService } from '@core/services/manager.service';
+import { ManagerService } from '../../services/manager.service';
 import { Employee } from '@core/models/employee.model';
 import { EmployeeFormModalComponent } from '../../components/employee-form-modal/employee-form-modal.component';
 import { finalize } from 'rxjs/operators';

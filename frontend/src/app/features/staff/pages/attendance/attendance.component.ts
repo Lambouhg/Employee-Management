@@ -2,6 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StaffAttendanceService } from '../../services/staff-attendance.service';
+import { ToastService } from '../../../../shared/services/toast.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import {
     TodayAttendance,
     AttendanceHistory,
@@ -19,6 +21,8 @@ import {
 })
 export class AttendanceComponent implements OnInit {
     private attendanceService = inject(StaffAttendanceService);
+    private toastService = inject(ToastService);
+    private confirmDialog = inject(ConfirmDialogService);
 
     // Signals
     todayAttendance = signal<TodayAttendance | null>(null);
@@ -71,31 +75,38 @@ export class AttendanceComponent implements OnInit {
     }
 
     /**
-     * Điểm danh
+     * Check-in attendance for specific shift
      */
-    onCheckIn() {
-        if (!confirm('Bạn có chắc chắn muốn điểm danh không?')) {
-            return;
-        }
+    onCheckIn(shiftId: string) {
+        this.confirmDialog.confirm({
+            title: 'Check-In Confirmation',
+            message: 'Are you ready to check in for your shift?',
+            confirmText: 'Check-In',
+            cancelText: 'Cancel',
+            type: 'info'
+        }).subscribe(confirmed => {
+            if (!confirmed) return;
 
-        this.checkingIn.set(true);
-        const request: CheckInRequest = {
-            notes: this.checkInNotes.trim() || undefined
-        };
+            this.checkingIn.set(true);
+            const request: CheckInRequest = {
+                shiftId,
+                notes: this.checkInNotes.trim() || undefined
+            };
 
-        this.attendanceService.checkIn(request).subscribe({
-            next: (result) => {
-                this.checkingIn.set(false);
-                this.checkInNotes = '';
-                alert('Điểm danh thành công!');
-                this.loadTodayAttendance();
-                this.loadHistory();
-            },
-            error: (error) => {
-                this.checkingIn.set(false);
-                const message = error.error?.message || 'Có lỗi xảy ra khi điểm danh';
-                alert(message);
-            }
+            this.attendanceService.checkIn(request).subscribe({
+                next: (result) => {
+                    this.checkingIn.set(false);
+                    this.checkInNotes = '';
+                    this.toastService.success('Check-in successful!');
+                    this.loadTodayAttendance();
+                    this.loadHistory();
+                },
+                error: (error) => {
+                    this.checkingIn.set(false);
+                    const message = error.error?.message || 'Failed to check in. Please try again.';
+                    this.toastService.error(message);
+                }
+            });
         });
     }
 
@@ -122,10 +133,10 @@ export class AttendanceComponent implements OnInit {
      */
     getShiftTypeName(type: ShiftType): string {
         const names: Record<ShiftType, string> = {
-            [ShiftType.MORNING]: 'Ca sáng',
-            [ShiftType.AFTERNOON]: 'Ca chiều',
-            [ShiftType.EVENING]: 'Ca tối',
-            [ShiftType.NIGHT]: 'Ca đêm'
+            [ShiftType.MORNING]: 'Morning Shift',
+            [ShiftType.AFTERNOON]: 'Afternoon Shift',
+            [ShiftType.EVENING]: 'Evening Shift',
+            [ShiftType.NIGHT]: 'Night Shift'
         };
         return names[type] || type;
     }
@@ -135,27 +146,27 @@ export class AttendanceComponent implements OnInit {
      */
     getStatusName(status: AttendanceStatus): string {
         const names: Record<AttendanceStatus, string> = {
-            [AttendanceStatus.PRESENT]: 'Có mặt',
-            [AttendanceStatus.LATE]: 'Đi muộn',
-            [AttendanceStatus.ABSENT]: 'Vắng mặt',
-            [AttendanceStatus.EARLY_LEAVE]: 'Về sớm',
-            [AttendanceStatus.ON_LEAVE]: 'Nghỉ phép'
+            [AttendanceStatus.PRESENT]: 'Present',
+            [AttendanceStatus.LATE]: 'Late',
+            [AttendanceStatus.ABSENT]: 'Absent',
+            [AttendanceStatus.EARLY_LEAVE]: 'Early Leave',
+            [AttendanceStatus.ON_LEAVE]: 'On Leave'
         };
         return names[status] || status;
     }
 
     /**
-     * Get status badge class
+     * Get status badge class for Tailwind CSS
      */
-    getStatusClass(status: AttendanceStatus): string {
+    getStatusBadgeClass(status: AttendanceStatus): string {
         const classes: Record<AttendanceStatus, string> = {
-            [AttendanceStatus.PRESENT]: 'badge-success',
-            [AttendanceStatus.LATE]: 'badge-warning',
-            [AttendanceStatus.ABSENT]: 'badge-danger',
-            [AttendanceStatus.EARLY_LEAVE]: 'badge-info',
-            [AttendanceStatus.ON_LEAVE]: 'badge-secondary'
+            [AttendanceStatus.PRESENT]: 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800',
+            [AttendanceStatus.LATE]: 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800',
+            [AttendanceStatus.ABSENT]: 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800',
+            [AttendanceStatus.EARLY_LEAVE]: 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800',
+            [AttendanceStatus.ON_LEAVE]: 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800'
         };
-        return classes[status] || 'badge-secondary';
+        return classes[status] || 'inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800';
     }
 
     /**
@@ -163,9 +174,10 @@ export class AttendanceComponent implements OnInit {
      */
     formatTime(timeString: string): string {
         const date = new Date(timeString);
-        return date.toLocaleTimeString('vi-VN', {
+        return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     }
 
@@ -174,9 +186,9 @@ export class AttendanceComponent implements OnInit {
      */
     formatDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
+        return date.toLocaleDateString('en-US', {
             year: 'numeric',
-            month: '2-digit',
+            month: 'short',
             day: '2-digit'
         });
     }
@@ -186,12 +198,13 @@ export class AttendanceComponent implements OnInit {
      */
     formatDateTime(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleString('vi-VN', {
+        return date.toLocaleString('en-US', {
             year: 'numeric',
-            month: '2-digit',
+            month: 'short',
             day: '2-digit',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     }
 

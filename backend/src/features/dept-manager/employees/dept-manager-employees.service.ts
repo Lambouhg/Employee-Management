@@ -168,8 +168,16 @@ export class DeptManagerEmployeesService {
 
         // If weekStartDate is provided, calculate weekly statistics
         if (weekStartDate) {
-            const weekEnd = new Date(weekStartDate);
+            // Ensure weekStartDate is at 00:00:00 local time
+            const weekStart = new Date(weekStartDate);
+            weekStart.setHours(0, 0, 0, 0);
+            
+            // Calculate end of week (7 days later at 00:00:00)
+            const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 7);
+            weekEnd.setHours(0, 0, 0, 0);
+
+            this.logger.debug(`Calculating shifts for week: ${weekStart.toISOString()} to ${weekEnd.toISOString()}`);
 
             // Get all shifts for this week for all employees
             const shiftsInWeek = await this.prisma.shift.groupBy({
@@ -177,7 +185,7 @@ export class DeptManagerEmployeesService {
                 where: {
                     employeeId: { in: employees.map(e => e.id) },
                     date: {
-                        gte: weekStartDate,
+                        gte: weekStart,
                         lt: weekEnd
                     }
                 },
@@ -185,6 +193,8 @@ export class DeptManagerEmployeesService {
                     id: true
                 }
             });
+            
+            this.logger.debug(`Found ${shiftsInWeek.length} employees with shifts`);
 
             const shiftsMap = new Map(
                 shiftsInWeek.map(s => [s.employeeId, s._count.id])
@@ -194,6 +204,14 @@ export class DeptManagerEmployeesService {
                 const totalShifts = shiftsMap.get(emp.id) || 0;
                 const maxShifts = emp.employmentType === 'FULL_TIME' ? 6 : 5;
                 const remainingSlots = Math.max(0, maxShifts - totalShifts);
+
+                // Log if totalShifts exceeds maxShifts (should not happen)
+                if (totalShifts > maxShifts) {
+                    this.logger.warn(
+                        `Employee ${emp.fullName} (${emp.employmentType}) has ${totalShifts} shifts ` +
+                        `in week ${weekStart.toISOString().split('T')[0]}, exceeds max ${maxShifts}`
+                    );
+                }
 
                 return {
                     id: emp.id,

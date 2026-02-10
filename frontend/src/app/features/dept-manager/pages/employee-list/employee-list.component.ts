@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { DeptManagerEmployeesService } from '../../services/dept-manager-employees.service';
+import { DeptManagerEmployeesService } from '../../services/employees.service';
 import { EmployeeListItem, PaginatedEmployeesResponse } from '../../models';
 import { LucideAngularModule, Search, Mail, Phone, Calendar } from 'lucide-angular';
 import { FormsModule } from '@angular/forms';

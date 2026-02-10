@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, Output, EventEmitter, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ManagerService } from '@app/core/services/manager.service';
-import { DepartmentService } from '@core/services/department.service';
+import { ManagerService } from '../../services/manager.service';
+import { DepartmentService } from '../../services/department.service';
 import { Observable, forkJoin, of, catchError, map, tap, finalize, switchMap } from 'rxjs';
 import { CreateEmployeeDto, UpdateEmployeeDto, Employee } from '@core/models/employee.model';
 import { Role } from '@core/models/role.model';

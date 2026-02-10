@@ -47,6 +47,13 @@ export interface Shift {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  attendance?: {
+    id: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY';
+    totalMinutes?: number;
+  };
 }
 
 export interface WorkSchedule {

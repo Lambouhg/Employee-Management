@@ -32,17 +32,20 @@ export class AvailableShiftsComponent implements OnInit {
   }
 
   loadShifts() {
-    const weekStart = new Date(this.selectedWeekStart);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6); // Thứ 2 + 6 ngày = Chủ nhật
-
     this.shifts$ = this.refreshSubject.pipe(
-      switchMap(() => this.shiftService.getAvailableShifts({
-        startDate: weekStart.toISOString().split('T')[0],
-        endDate: weekEnd.toISOString().split('T')[0]
-      })),
+      switchMap(() => {
+        // Calculate dates inside switchMap so they update when week changes
+        const weekStart = new Date(this.selectedWeekStart);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // Monday + 6 days = Sunday
+
+        return this.shiftService.getAvailableShifts({
+          startDate: weekStart.toISOString().split('T')[0],
+          endDate: weekEnd.toISOString().split('T')[0]
+        });
+      }),
       catchError(error => {
-        this.errorMessage = 'Không thể tải danh sách ca làm việc';
+        this.errorMessage = 'Unable to load available shifts';
         return of([]);
       })
     );
@@ -73,7 +76,7 @@ export class AvailableShiftsComponent implements OnInit {
   }
 
   registerForShift(shift: ShiftOpening) {
-    if (!confirm(`Đăng ký ca ${this.getShiftTypeLabel(shift.shiftType)} vào ${new Date(shift.date).toLocaleDateString('vi-VN')}?`)) {
+    if (!confirm(`Register for ${this.getShiftTypeLabel(shift.shiftType)} shift on ${new Date(shift.date).toLocaleDateString('en-US')}?`)) {
       return;
     }
 
@@ -82,13 +85,13 @@ export class AvailableShiftsComponent implements OnInit {
 
     this.shiftService.registerForShift({ openingId: shift.id }).subscribe({
       next: () => {
-        this.successMessage = 'Đăng ký ca thành công! Chờ quản lý phê duyệt.';
+        this.successMessage = 'Registration successful! Waiting for manager approval.';
         this.refreshSubject.next();
         this.isRegistering = false;
         setTimeout(() => this.successMessage = '', 3000);
       },
       error: (error) => {
-        this.errorMessage = error.error?.message || 'Không thể đăng ký ca';
+        this.errorMessage = error.error?.message || 'Unable to register for shift';
         this.isRegistering = false;
       }
     });
@@ -96,10 +99,10 @@ export class AvailableShiftsComponent implements OnInit {
 
   getShiftTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'MORNING': 'Sáng',
-      'AFTERNOON': 'Chiều',
-      'EVENING': 'Tối',
-      'NIGHT': 'Đêm'
+      'MORNING': 'Morning',
+      'AFTERNOON': 'Afternoon',
+      'EVENING': 'Evening',
+      'NIGHT': 'Night'
     };
     return labels[type] || type;
   }
@@ -127,6 +130,22 @@ export class AvailableShiftsComponent implements OnInit {
     // Use availableSlots from backend if available (for PT)
     // For FT, calculate based on capacity
     return shift.availableSlots ?? (shift.ptCapacity - shift.ptRegistered);
+  }
+
+  isPastShift(shift: ShiftOpening): boolean {
+    const shiftDate = new Date(shift.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    shiftDate.setHours(0, 0, 0, 0);
+    return shiftDate < today;
+  }
+
+  isPastDate(date: Date): boolean {
+    const checkDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
   }
 
   private getMonday(date: Date): Date {

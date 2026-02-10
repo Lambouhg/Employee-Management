@@ -1,15 +1,16 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
-import { DeptManagerSchedulesService } from '../../services/dept-manager-schedules.service';
+import { DeptManagerSchedulesService } from '../../services/schedules.service';
 import { DeptWeeklyPlan, ShiftOpening } from '@core/models/schedule.model';
 import { 
   AlertMessageComponent,
   ScheduleHeaderComponent,
   ScheduleCalendarComponent,
   ShiftFormModalComponent,
+  ShiftDetailModalComponent,
   ShiftFormData
-} from './components';
+} from '../../components';
 import { Observable, BehaviorSubject, catchError, tap, of, switchMap } from 'rxjs';
 
 @Component({
@@ -21,7 +22,8 @@ import { Observable, BehaviorSubject, catchError, tap, of, switchMap } from 'rxj
     AlertMessageComponent,
     ScheduleHeaderComponent,
     ScheduleCalendarComponent,
-    ShiftFormModalComponent
+    ShiftFormModalComponent,
+    ShiftDetailModalComponent
   ],
   templateUrl: './schedule-editor.component.html',
   styleUrl: './schedule-editor.component.css'
@@ -40,7 +42,9 @@ export class ScheduleEditorComponent implements OnInit {
   
   // UI State
   showShiftForm = false;
+  showShiftDetail = false;
   editingShift: ShiftOpening | null = null;
+  viewingShift: ShiftOpening | null = null;
   isSaving = false;
   isPublishing = false;
   isLocking = false;
@@ -234,6 +238,16 @@ export class ScheduleEditorComponent implements OnInit {
       notes: shift.notes || ''
     };
     this.showShiftForm = true;
+  }
+
+  viewShiftDetail(shift: ShiftOpening) {
+    this.viewingShift = shift;
+    this.showShiftDetail = true;
+  }
+
+  closeShiftDetail() {
+    this.showShiftDetail = false;
+    this.viewingShift = null;
   }
 
   saveShift(formData: ShiftFormData) {

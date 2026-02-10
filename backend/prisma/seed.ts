@@ -612,54 +612,40 @@ async function main() {
   console.log('✅ Created FT user: ft.tech1@company.com (password: 123456)');
 
   // ============================================
-  // 10. SEED SAMPLE DATA FOR THIS WEEK (Feb 2-8, 2026)
+  // 10. SEED COMPREHENSIVE DATA FOR 3 WEEKS
   // ============================================
-  console.log('\n📅 Seeding sample data for this week (Feb 2-8, 2026)...');
+  console.log('\n📅 Seeding comprehensive data for 3 weeks...');
+  console.log('   - Week 1 (Past): Feb 2-8, 2026 - Complete with attendance');
+  console.log('   - Week 2 (Current): Feb 9-15, 2026 - Partial attendance for testing');
+  console.log('   - Week 3 (Future): Feb 16-22, 2026 - Schedules ready, no attendance yet');
 
-  // Get users for sample data
-  const salesManager = await prisma.user.findUnique({
-    where: { email: 'sales.manager@company.com' },
-  });
-  const ftSales1 = await prisma.user.findUnique({
-    where: { email: 'ft.sales1@company.com' },
-  });
-  const ftSales2 = await prisma.user.findUnique({
-    where: { email: 'ft.sales2@company.com' },
-  });
-  const ptSales1 = await prisma.user.findUnique({
-    where: { email: 'pt.sales1@company.com' },
-  });
-
-  // Get shift templates for Sales department
-  const morningTemplate = await prisma.shiftTemplate.findFirst({
+  // Get all users
+  const allUsers = await prisma.user.findMany({
     where: {
-      departmentId: salesDept!.id,
-      shiftType: 'MORNING',
+      roleId: { not: managerRole!.id }, // Exclude top-level manager
     },
-  });
-  const afternoonTemplate = await prisma.shiftTemplate.findFirst({
-    where: {
-      departmentId: salesDept!.id,
-      shiftType: 'AFTERNOON',
+    include: {
+      department: true,
     },
   });
 
-  // Week start date: Monday Feb 2, 2026
-  const weekStart = new Date('2026-02-02');
+  // Get all shift templates by department
+  const savedShiftTemplates = await prisma.shiftTemplate.findMany();
 
-  // 1. Create Department Weekly Plan for Sales
-  const weeklyPlan = await prisma.deptWeeklyPlan.create({
-    data: {
-      departmentId: salesDept!.id,
-      weekStartDate: weekStart,
-      status: 'PUBLISHED',
-    },
-  });
-  console.log('✅ Created weekly plan for Sales department');
+  // Helper: Create time with specific hour
+  const createDateTime = (dateStr: string, hours: number, minutes: number = 0) => {
+    const date = new Date(dateStr);
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
 
-  // 2. Create Shift Openings for the week
-  const shiftOpenings: any[] = [];
-  const daysOfWeek = [
+  // ============================================
+  // WEEK 1: PAST WEEK (Feb 2-8, 2026) - COMPLETED WITH FULL ATTENDANCE
+  // ============================================
+  console.log('\n📆 Week 1: Feb 2-8, 2026 (Past - Complete)...');
+  
+  const week1Start = new Date('2026-02-02');
+  const week1Dates = [
     { date: '2026-02-02', day: 'Monday' },
     { date: '2026-02-03', day: 'Tuesday' },
     { date: '2026-02-04', day: 'Wednesday' },
@@ -668,175 +654,474 @@ async function main() {
     { date: '2026-02-07', day: 'Saturday' },
   ];
 
-  for (const { date, day } of daysOfWeek) {
-    // Morning shift (8:00-12:00)
-    const morningOpening = await prisma.shiftOpening.create({
+  // Create weekly plans for each department
+  const week1Plans: any = {};
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const plan = await prisma.deptWeeklyPlan.create({
       data: {
-        planId: weeklyPlan.id,
-        templateId: morningTemplate!.id,
-        date: new Date(date),
-        shiftType: 'MORNING',
-        startTime: new Date('1970-01-01T08:00:00Z'),
-        endTime: new Date('1970-01-01T12:00:00Z'),
-        isFTEnabled: true,
-        ftAutoAssigned: true,
-        isPTEnabled: true,
-        ptCapacity: 2,
-        notes: `${day} morning shift`,
+        departmentId: dept!.id,
+        weekStartDate: week1Start,
+        status: 'LOCKED',
       },
     });
-    shiftOpenings.push(morningOpening);
-
-    // Afternoon shift (13:00-17:00)
-    const afternoonOpening = await prisma.shiftOpening.create({
-      data: {
-        planId: weeklyPlan.id,
-        templateId: afternoonTemplate!.id,
-        date: new Date(date),
-        shiftType: 'AFTERNOON',
-        startTime: new Date('1970-01-01T13:00:00Z'),
-        endTime: new Date('1970-01-01T17:00:00Z'),
-        isFTEnabled: true,
-        ftAutoAssigned: true,
-        isPTEnabled: true,
-        ptCapacity: 2,
-        notes: `${day} afternoon shift`,
-      },
-    });
-    shiftOpenings.push(afternoonOpening);
+    week1Plans[dept!.id] = plan;
+    console.log(`✅ Created Week 1 plan for ${dept!.name}`);
   }
-  console.log(`✅ Created ${shiftOpenings.length} shift openings for the week`);
 
-  // 3. Create Work Schedules and assign Shifts for FT employees
-  // FT Sales 1 (fixed day off: SUNDAY)
-  const ftSales1Schedule = await prisma.workSchedule.create({
-    data: {
-      employeeId: ftSales1!.id,
-      weekStartDate: weekStart,
-      status: 'APPROVED',
-      approvedById: salesManager!.id,
-      approvedAt: new Date(),
-      submittedAt: new Date('2026-01-26'), // Submitted 1 week before
-    },
-  });
+  // Create shift openings and schedules for Week 1
+  const week1Shifts: any[] = [];
+  
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const deptTemplates = savedShiftTemplates.filter(t => t.departmentId === dept!.id);
+    const plan = week1Plans[dept!.id];
+    
+    // Create openings for each day
+    for (const { date } of week1Dates) {
+      for (const template of deptTemplates) {
+        const opening = await prisma.shiftOpening.create({
+          data: {
+            planId: plan.id,
+            templateId: template.id,
+            date: new Date(date),
+            shiftType: template.shiftType,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            isFTEnabled: true,
+            ftAutoAssigned: true,
+            isPTEnabled: template.allowPartTime,
+            ptCapacity: 3,
+          },
+        });
 
-  // Create shifts for FT Sales 1 (Morning shifts Mon-Sat)
-  for (let i = 0; i < 6; i++) {
-    const shiftDate = new Date('2026-02-02');
-    shiftDate.setDate(shiftDate.getDate() + i);
-    await prisma.shift.create({
+        // Get employees in this department
+        const deptEmployees = allUsers.filter(u => u.departmentId === dept!.id);
+        
+        for (const employee of deptEmployees) {
+          // Full-time: exclude fixed day off
+          if (employee.employmentType === 'FULL_TIME') {
+            const dateObj = new Date(date);
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+            if (employee.fixedDayOff === dayName) continue;
+
+            // Create schedule if not exists
+            let schedule = await prisma.workSchedule.findUnique({
+              where: {
+                employeeId_weekStartDate: {
+                  employeeId: employee.id,
+                  weekStartDate: week1Start,
+                },
+              },
+            });
+
+            if (!schedule) {
+              schedule = await prisma.workSchedule.create({
+                data: {
+                  employeeId: employee.id,
+                  weekStartDate: week1Start,
+                  status: 'LOCKED',
+                  submittedAt: new Date('2026-01-26'),
+                  approvedAt: new Date('2026-01-28'),
+                  lockedAt: new Date('2026-01-31'),
+                },
+              });
+            }
+
+            // Create shift
+            const shift = await prisma.shift.create({
+              data: {
+                scheduleId: schedule.id,
+                employeeId: employee.id,
+                openingId: opening.id,
+                date: new Date(date),
+                shiftType: template.shiftType,
+                startTime: template.startTime,
+                endTime: template.endTime,
+                isAutoGenerated: true,
+              },
+            });
+            week1Shifts.push({ shift, employee, date, template });
+          }
+          // Part-time: Random 4-5 shifts per week
+          else if (employee.employmentType === 'PART_TIME') {
+            const shouldWork = Math.random() > 0.3; // 70% chance to work this shift
+            if (!shouldWork) continue;
+
+            let schedule = await prisma.workSchedule.findUnique({
+              where: {
+                employeeId_weekStartDate: {
+                  employeeId: employee.id,
+                  weekStartDate: week1Start,
+                },
+              },
+            });
+
+            if (!schedule) {
+              schedule = await prisma.workSchedule.create({
+                data: {
+                  employeeId: employee.id,
+                  weekStartDate: week1Start,
+                  status: 'LOCKED',
+                  submittedAt: new Date('2026-01-26'),
+                  approvedAt: new Date('2026-01-28'),
+                  lockedAt: new Date('2026-01-31'),
+                },
+              });
+            }
+
+            const shift = await prisma.shift.create({
+              data: {
+                scheduleId: schedule.id,
+                employeeId: employee.id,
+                openingId: opening.id,
+                date: new Date(date),
+                shiftType: template.shiftType,
+                startTime: template.startTime,
+                endTime: template.endTime,
+                isAutoGenerated: false,
+              },
+            });
+            week1Shifts.push({ shift, employee, date, template });
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`✅ Created ${week1Shifts.length} shifts for Week 1`);
+
+  // Create COMPLETE attendance records for Week 1 (all shifts checked in)
+  let week1AttendanceCount = 0;
+  for (const { shift, employee, date, template } of week1Shifts) {
+    // Calculate realistic check-in time: -5 to +20 minutes from start time
+    const startHour = template.startTime.getHours();
+    const startMinute = template.startTime.getMinutes();
+    const minutesOffset = Math.floor(Math.random() * 25) - 5; // -5 to +20
+    
+    const checkInTime = createDateTime(date, startHour, startMinute + minutesOffset);
+    
+    // Determine status: LATE if > 15 minutes late, otherwise PRESENT
+    const status = minutesOffset > 15 ? 'LATE' : 'PRESENT';
+    
+    await prisma.attendance.create({
       data: {
-        scheduleId: ftSales1Schedule.id,
-        employeeId: ftSales1!.id,
-        openingId: shiftOpenings[i * 2].id, // Morning shifts (even indices)
-        date: shiftDate,
-        shiftType: 'MORNING',
-        startTime: new Date('1970-01-01T08:00:00Z'),
-        endTime: new Date('1970-01-01T12:00:00Z'),
-        isAutoGenerated: true,
+        shiftId: shift.id,
+        employeeId: employee.id,
+        checkInTime,
+        status,
+        notes: status === 'LATE' ? 'Đi muộn' : undefined,
       },
     });
+    week1AttendanceCount++;
   }
-  console.log('✅ Created work schedule and shifts for ft.sales1@company.com');
+  console.log(`✅ Created ${week1AttendanceCount} attendance records for Week 1 (100% complete)`);
 
-  // FT Sales 2 (fixed day off: MONDAY) - has afternoon shifts
-  const ftSales2Schedule = await prisma.workSchedule.create({
-    data: {
-      employeeId: ftSales2!.id,
-      weekStartDate: weekStart,
-      status: 'APPROVED',
-      approvedById: salesManager!.id,
-      approvedAt: new Date(),
-      submittedAt: new Date('2026-01-26'),
-    },
-  });
+  // ============================================
+  // WEEK 2: CURRENT WEEK (Feb 9-15, 2026) - PARTIAL ATTENDANCE
+  // ============================================
+  console.log('\n📆 Week 2: Feb 9-15, 2026 (Current - Partial for testing)...');
+  
+  const week2Start = new Date('2026-02-09');
+  const week2Dates = [
+    { date: '2026-02-09', day: 'Monday', past: true },
+    { date: '2026-02-10', day: 'Tuesday', past: false }, // Today is Feb 9, so this is future
+    { date: '2026-02-11', day: 'Wednesday', past: false },
+    { date: '2026-02-12', day: 'Thursday', past: false },
+    { date: '2026-02-13', day: 'Friday', past: false },
+    { date: '2026-02-14', day: 'Saturday', past: false },
+  ];
 
-  // Create shifts for FT Sales 2 (Afternoon shifts Tue-Sat, skip Monday)
-  for (let i = 1; i < 6; i++) {
-    const shiftDate = new Date('2026-02-02');
-    shiftDate.setDate(shiftDate.getDate() + i);
-    await prisma.shift.create({
+  // Create weekly plans for each department
+  const week2Plans: any = {};
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const plan = await prisma.deptWeeklyPlan.create({
       data: {
-        scheduleId: ftSales2Schedule.id,
-        employeeId: ftSales2!.id,
-        openingId: shiftOpenings[i * 2 + 1].id, // Afternoon shifts (odd indices)
-        date: shiftDate,
-        shiftType: 'AFTERNOON',
-        startTime: new Date('1970-01-01T13:00:00Z'),
-        endTime: new Date('1970-01-01T17:00:00Z'),
-        isAutoGenerated: true,
+        departmentId: dept!.id,
+        weekStartDate: week2Start,
+        status: 'PUBLISHED',
       },
     });
+    week2Plans[dept!.id] = plan;
   }
-  console.log('✅ Created work schedule and shifts for ft.sales2@company.com');
 
-  // 4. Create PT employee schedule with some shifts
-  const ptSales1Schedule = await prisma.workSchedule.create({
-    data: {
-      employeeId: ptSales1!.id,
-      weekStartDate: weekStart,
-      status: 'APPROVED',
-      approvedById: salesManager!.id,
-      approvedAt: new Date(),
-      submittedAt: new Date('2026-01-26'),
-    },
-  });
+  // Create shift openings and schedules for Week 2
+  const week2Shifts: any[] = [];
+  
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const deptTemplates = savedShiftTemplates.filter(t => t.departmentId === dept!.id);
+    const plan = week2Plans[dept!.id];
+    
+    for (const { date } of week2Dates) {
+      for (const template of deptTemplates) {
+        const opening = await prisma.shiftOpening.create({
+          data: {
+            planId: plan.id,
+            templateId: template.id,
+            date: new Date(date),
+            shiftType: template.shiftType,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            isFTEnabled: true,
+            ftAutoAssigned: true,
+            isPTEnabled: template.allowPartTime,
+            ptCapacity: 3,
+          },
+        });
 
-  // PT works 5 shifts: Mon afternoon, Tue morning, Wed afternoon, Thu morning, Fri afternoon
-  const ptShiftIndices = [1, 2, 5, 6, 9]; // Afternoon-Morning-Afternoon-Morning-Afternoon pattern
-  for (let i = 0; i < ptShiftIndices.length; i++) {
-    const openingIndex = ptShiftIndices[i];
-    const opening = shiftOpenings[openingIndex];
-    const shiftDate = new Date(opening.date);
+        const deptEmployees = allUsers.filter(u => u.departmentId === dept!.id);
+        
+        for (const employee of deptEmployees) {
+          if (employee.employmentType === 'FULL_TIME') {
+            const dateObj = new Date(date);
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+            if (employee.fixedDayOff === dayName) continue;
 
-    await prisma.shift.create({
+            let schedule = await prisma.workSchedule.findUnique({
+              where: {
+                employeeId_weekStartDate: {
+                  employeeId: employee.id,
+                  weekStartDate: week2Start,
+                },
+              },
+            });
+
+            if (!schedule) {
+              schedule = await prisma.workSchedule.create({
+                data: {
+                  employeeId: employee.id,
+                  weekStartDate: week2Start,
+                  status: 'APPROVED',
+                  submittedAt: new Date('2026-02-02'),
+                  approvedAt: new Date('2026-02-05'),
+                },
+              });
+            }
+
+            const shift = await prisma.shift.create({
+              data: {
+                scheduleId: schedule.id,
+                employeeId: employee.id,
+                openingId: opening.id,
+                date: new Date(date),
+                shiftType: template.shiftType,
+                startTime: template.startTime,
+                endTime: template.endTime,
+                isAutoGenerated: true,
+              },
+            });
+            week2Shifts.push({ shift, employee, date, template, isPast: date === '2026-02-09' });
+          }
+          else if (employee.employmentType === 'PART_TIME') {
+            const shouldWork = Math.random() > 0.3;
+            if (!shouldWork) continue;
+
+            let schedule = await prisma.workSchedule.findUnique({
+              where: {
+                employeeId_weekStartDate: {
+                  employeeId: employee.id,
+                  weekStartDate: week2Start,
+                },
+              },
+            });
+
+            if (!schedule) {
+              schedule = await prisma.workSchedule.create({
+                data: {
+                  employeeId: employee.id,
+                  weekStartDate: week2Start,
+                  status: 'APPROVED',
+                  submittedAt: new Date('2026-02-02'),
+                  approvedAt: new Date('2026-02-05'),
+                },
+              });
+            }
+
+            const shift = await prisma.shift.create({
+              data: {
+                scheduleId: schedule.id,
+                employeeId: employee.id,
+                openingId: opening.id,
+                date: new Date(date),
+                shiftType: template.shiftType,
+                startTime: template.startTime,
+                endTime: template.endTime,
+                isAutoGenerated: false,
+              },
+            });
+            week2Shifts.push({ shift, employee, date, template, isPast: date === '2026-02-09' });
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`✅ Created ${week2Shifts.length} shifts for Week 2`);
+
+  // Create PARTIAL attendance for Week 2 (only Monday Feb 9 - 80% checked in)
+  let week2AttendanceCount = 0;
+  for (const { shift, employee, date, template, isPast } of week2Shifts) {
+    // Only create attendance for past days (Monday Feb 9)
+    if (!isPast) continue;
+    
+    // 80% attendance rate (some people might not have checked in yet)
+    if (Math.random() > 0.8) continue;
+    
+    const startHour = template.startTime.getHours();
+    const startMinute = template.startTime.getMinutes();
+    const minutesOffset = Math.floor(Math.random() * 25) - 5;
+    
+    const checkInTime = createDateTime(date, startHour, startMinute + minutesOffset);
+    const status = minutesOffset > 15 ? 'LATE' : 'PRESENT';
+    
+    await prisma.attendance.create({
       data: {
-        scheduleId: ptSales1Schedule.id,
-        employeeId: ptSales1!.id,
-        openingId: opening.id,
-        date: shiftDate,
-        shiftType: opening.shiftType,
-        startTime: opening.startTime,
-        endTime: opening.endTime,
-        isAutoGenerated: false,
+        shiftId: shift.id,
+        employeeId: employee.id,
+        checkInTime,
+        status,
       },
     });
+    week2AttendanceCount++;
   }
-  console.log('✅ Created work schedule and 5 shifts for pt.sales1@company.com');
+  console.log(`✅ Created ${week2AttendanceCount} attendance records for Week 2 (partial - for testing)`);
 
-  // 5. Create a sample Leave Request (PENDING)
+  // ============================================
+  // WEEK 3: FUTURE WEEK (Feb 16-22, 2026) - SCHEDULES ONLY
+  // ============================================
+  console.log('\n📆 Week 3: Feb 16-22, 2026 (Future - Ready for scheduling)...');
+  
+  const week3Start = new Date('2026-02-16');
+  const week3Dates = [
+    { date: '2026-02-16', day: 'Monday' },
+    { date: '2026-02-17', day: 'Tuesday' },
+    { date: '2026-02-18', day: 'Wednesday' },
+    { date: '2026-02-19', day: 'Thursday' },
+    { date: '2026-02-20', day: 'Friday' },
+    { date: '2026-02-21', day: 'Saturday' },
+  ];
+
+  // Create weekly plans
+  const week3Plans: any = {};
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const plan = await prisma.deptWeeklyPlan.create({
+      data: {
+        departmentId: dept!.id,
+        weekStartDate: week3Start,
+        status: 'DRAFT',
+      },
+    });
+    week3Plans[dept!.id] = plan;
+  }
+
+  // Create shift openings for Week 3
+  let week3OpeningCount = 0;
+  for (const dept of [salesDept, techDept, hrDept]) {
+    const deptTemplates = savedShiftTemplates.filter(t => t.departmentId === dept!.id);
+    const plan = week3Plans[dept!.id];
+    
+    for (const { date } of week3Dates) {
+      for (const template of deptTemplates) {
+        await prisma.shiftOpening.create({
+          data: {
+            planId: plan.id,
+            templateId: template.id,
+            date: new Date(date),
+            shiftType: template.shiftType,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            isFTEnabled: true,
+            ftAutoAssigned: false, // Will auto-assign when published
+            isPTEnabled: template.allowPartTime,
+            ptCapacity: 3,
+          },
+        });
+        week3OpeningCount++;
+      }
+    }
+  }
+  console.log(`✅ Created ${week3OpeningCount} shift openings for Week 3 (no schedules yet)`);
+
+  // ============================================
+  // CREATE DIVERSE LEAVE REQUESTS
+  // ============================================
+  console.log('\n🏖️ Creating leave requests...');
+  
+  const ptSales1 = await prisma.user.findUnique({ where: { email: 'pt.sales1@company.com' } });
+  const ftTech1 = await prisma.user.findUnique({ where: { email: 'ft.tech1@company.com' } });
+  const staffUser = await prisma.user.findUnique({ where: { email: 'staff@company.com' } });
+
+  // Pending leave for next week
   await prisma.leaveRequest.create({
     data: {
       employeeId: ptSales1!.id,
       leaveType: 'PERSONAL',
-      startDate: new Date('2026-02-10'), // Next Monday (no conflict with current week)
-      endDate: new Date('2026-02-11'), // 2 days
+      startDate: new Date('2026-02-10'),
+      endDate: new Date('2026-02-11'),
       reason: 'Cần xử lý việc cá nhân',
       status: 'PENDING',
     },
   });
-  console.log('✅ Created sample leave request for pt.sales1@company.com');
 
-  // 6. Update PT registered count for openings
-  for (const opening of shiftOpenings) {
-    const registeredCount = await prisma.shift.count({
-      where: {
-        openingId: opening.id,
-        employee: { employmentType: 'PART_TIME' },
-      },
-    });
-    
-    await prisma.shiftOpening.update({
-      where: { id: opening.id },
-      data: { ptRegistered: registeredCount },
-    });
-  }
-  console.log('✅ Updated PT registered counts for shift openings');
+  // Approved leave for Week 3
+  await prisma.leaveRequest.create({
+    data: {
+      employeeId: ftTech1!.id,
+      leaveType: 'SICK',
+      startDate: new Date('2026-02-17'),
+      endDate: new Date('2026-02-18'),
+      reason: 'Bị cảm, cần nghỉ ngơi',
+      status: 'APPROVED',
+      approvedAt: new Date('2026-02-08'),
+    },
+  });
+
+  // Rejected leave
+  await prisma.leaveRequest.create({
+    data: {
+      employeeId: staffUser!.id,
+      leaveType: 'EMERGENCY',
+      startDate: new Date('2026-02-11'),
+      endDate: new Date('2026-02-11'),
+      reason: 'Khẩn cấp gia đình',
+      status: 'REJECTED',
+      rejectionReason: 'Không đủ nhân sự trong ngày này',
+      approvedAt: new Date('2026-02-08'),
+    },
+  });
+
+  console.log('✅ Created 3 diverse leave requests');
 
   console.log('\n✨ Seed completed successfully!');
-  console.log('📊 Sample data created for week Feb 2-8, 2026');
-  console.log('👉 Login as sales.manager@company.com to manage the department');
-  console.log('👉 Login as ft.sales1@company.com or pt.sales1@company.com to test employee features');
+  console.log('\n📊 COMPREHENSIVE DATA SUMMARY:');
+  console.log('═══════════════════════════════════════════════');
+  console.log('📅 Week 1 (Past - Feb 2-8): LOCKED with full attendance');
+  console.log(`   - ${week1Shifts.length} shifts scheduled`);
+  console.log(`   - ${week1AttendanceCount} attendance records (100% complete)`);
+  console.log('');
+  console.log('📅 Week 2 (Current - Feb 9-15): PUBLISHED with partial attendance');
+  console.log(`   - ${week2Shifts.length} shifts scheduled`);
+  console.log(`   - ${week2AttendanceCount} attendance records (partial for testing)`);
+  console.log('   - Ready for check-in testing');
+  console.log('');
+  console.log('📅 Week 3 (Future - Feb 16-22): DRAFT for planning');
+  console.log(`   - ${week3OpeningCount} shift openings created`);
+  console.log('   - No schedules yet (ready for employee registration)');
+  console.log('');
+  console.log('🏖️ Leave Requests: 3 (Pending, Approved, Rejected)');
+  console.log('═══════════════════════════════════════════════');
+  console.log('\n👤 TEST ACCOUNTS (password: 123456):');
+  console.log('   🔴 manager@company.com - System Manager (HR Dept)');
+  console.log('   🟡 sales.manager@company.com - Sales Manager');
+  console.log('   🟡 tech.manager@company.com - Tech Manager');
+  console.log('   🟢 staff@company.com - FT Staff (Tech Dept)');
+  console.log('   🟢 ft.sales1@company.com - FT Staff (Sales Dept)');
+  console.log('   🟢 ft.sales2@company.com - FT Staff (Sales Dept)');
+  console.log('   🔵 pt.sales1@company.com - PT Staff (Sales Dept)');
+  console.log('   🔵 pt.sales2@company.com - PT Staff (Sales Dept)');
+  console.log('   🔵 pt.tech1@company.com - PT Staff (Tech Dept)');
+  console.log('\n✅ ATTENDANCE CHECK-IN READY:');
+  console.log('   - Week 2 shifts can be tested with /staff/attendance/check-in');
+  console.log('   - Check-in window: 30 mins before → 60 mins after shift start');
+  console.log('   - Status: PRESENT (on time) or LATE (>15 mins)');
 }
 
 main()

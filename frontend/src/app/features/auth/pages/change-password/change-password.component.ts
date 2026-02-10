@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { AuthValidators, AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@features/auth';
 
 @Component({
   selector: 'app-change-password',
@@ -24,25 +25,15 @@ export class ChangePasswordComponent {
     oldPassword: ['', [Validators.required]],
     newPassword: ['', [
       Validators.required,
-      Validators.minLength(8),
-      Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      AuthValidators.strongPassword()
     ]],
     confirmPassword: ['', [Validators.required]]
   }, {
-    validators: this.passwordMatchValidator
+    validators: [
+      AuthValidators.passwordMatch('newPassword', 'confirmPassword'),
+      AuthValidators.passwordDifferent('oldPassword', 'newPassword')
+    ]
   });
-
-  // Custom validator to check if passwords match
-  private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const newPassword = control.get('newPassword');
-    const confirmPassword = control.get('confirmPassword');
-
-    if (!newPassword || !confirmPassword) {
-      return null;
-    }
-
-    return newPassword.value === confirmPassword.value ? null : { passwordMismatch: true };
-  }
 
   onSubmit(): void {
     if (this.changePasswordForm.invalid) {
@@ -63,7 +54,7 @@ export class ChangePasswordComponent {
     this.authService.changePassword(request).subscribe({
       next: (response) => {
         this.isLoading = false;
-        this.successMessage = response.message || 'Đổi mật khẩu thành công';
+        this.successMessage = response.message || AUTH_SUCCESS_MESSAGES.PASSWORD_CHANGED;
         
         // Clear form
         this.changePasswordForm.reset();
@@ -78,15 +69,15 @@ export class ChangePasswordComponent {
         }, 2000);
       },
       error: (error) => {
-        console.error('Change password error', error);
         this.isLoading = false;
         
-        // Handle array of messages or single message
-        const errorMsg = error.error?.message;
-        if (Array.isArray(errorMsg)) {
-          this.errorMessage = errorMsg.join(', ') || 'Đổi mật khẩu thất bại';
+        // Generic error messages for security
+        if (error.status === 401) {
+          this.errorMessage = AUTH_ERROR_MESSAGES.PASSWORD_INCORRECT;
+        } else if (error.status === 400) {
+          this.errorMessage = AUTH_ERROR_MESSAGES.PASSWORD_INVALID;
         } else {
-          this.errorMessage = errorMsg || 'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.';
+          this.errorMessage = AUTH_ERROR_MESSAGES.CHANGE_PASSWORD_FAILED;
         }
       }
     });

@@ -12,7 +12,7 @@ export class CreateLeaveRequestDto {
     endDate: string; // YYYY-MM-DD
 
     @IsString()
-    @MinLength(10, { message: 'Lý do phải có ít nhất 10 ký tự' })
+    @MinLength(10, { message: 'Reason must be at least 10 characters' })
     reason: string;
 }
 

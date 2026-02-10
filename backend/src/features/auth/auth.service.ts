@@ -82,7 +82,7 @@ export class AuthService {
     // 5. Tạo access token
     const accessToken = this.jwtService.sign(payload);
 
-    // Refresh token với thời gian dài hơn (30 days) - optional
+    // Refresh token với thời gian dài hơn - optional
     const refreshPayload: JwtPayload = {
       ...payload,
       type: 'refresh',

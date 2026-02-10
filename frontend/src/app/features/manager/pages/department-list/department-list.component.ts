@@ -2,8 +2,8 @@ import { Component, OnInit, ChangeDetectorRef, HostListener, inject } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { DepartmentService } from '@core/services/department.service';
-import { ManagerService } from '@app/core/services/manager.service';
+import { DepartmentService } from '../../services/department.service';
+import { ManagerService } from '../../services/manager.service';
 import { DepartmentFormModalComponent } from '../../components/department-form-modal/department-form-modal.component';
 import { AssignManagerModalComponent } from '../../components/assign-manager-modal/assign-manager-modal.component';
 import { ManageEmployeesModalComponent } from '../../components/manage-employees-modal/manage-employees-modal.component';

@@ -44,7 +44,16 @@ export class DeptManagerSchedulesService {
                         shifts: {
                             include: {
                                 employee: {
-                                    select: { id: true, fullName: true, email: true }
+                                    select: { id: true, fullName: true, email: true, employmentType: true }
+                                },
+                                attendance: {
+                                    select: { 
+                                        id: true, 
+                                        checkInTime: true, 
+                                        checkOutTime: true, 
+                                        status: true,
+                                        totalMinutes: true
+                                    }
                                 }
                             }
                         }
@@ -78,6 +87,15 @@ export class DeptManagerSchedulesService {
                             include: {
                                 employee: {
                                     select: { id: true, fullName: true, email: true, employmentType: true }
+                                },
+                                attendance: {
+                                    select: { 
+                                        id: true, 
+                                        checkInTime: true, 
+                                        checkOutTime: true, 
+                                        status: true,
+                                        totalMinutes: true
+                                    }
                                 }
                             }
                         }

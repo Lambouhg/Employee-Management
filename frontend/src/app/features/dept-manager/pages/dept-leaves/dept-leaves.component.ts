@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { DeptManagerLeavesService } from '../../services/dept-manager-leaves.service';
+import { DeptManagerLeavesService } from '../../services/leaves.service';
 import {
     DeptLeaveRequest,
     DeptLeavesListResponse,

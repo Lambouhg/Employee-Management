@@ -15,7 +15,7 @@ export class StaffLeavesService {
     constructor(private readonly prisma: PrismaService) { }
 
     /**
-     * Tạo yêu cầu nghỉ phép
+     * Create leave request (auto-detect emergency based on date)
      */
     async createLeaveRequest(employeeId: string, dto: CreateLeaveRequestDto): Promise<LeaveRequestResponseDto> {
         // Validate dates
@@ -25,12 +25,17 @@ export class StaffLeavesService {
         today.setHours(0, 0, 0, 0);
 
         if (startDate < today) {
-            throw new BadRequestException('Ngày bắt đầu không thể là ngày trong quá khứ');
+            throw new BadRequestException('Start date cannot be in the past');
         }
 
         if (endDate < startDate) {
-            throw new BadRequestException('Ngày kết thúc phải sau ngày bắt đầu');
+            throw new BadRequestException('End date must be after start date');
         }
+
+        // Auto-detect emergency: if requesting for today or next 2 days
+        const emergencyThreshold = new Date(today);
+        emergencyThreshold.setDate(emergencyThreshold.getDate() + 2);
+        const isEmergencyLeave = startDate <= emergencyThreshold;
 
         // Check for overlapping leave requests
         const overlapping = await this.prisma.leaveRequest.findFirst({
@@ -63,10 +68,10 @@ export class StaffLeavesService {
         });
 
         if (overlapping) {
-            throw new BadRequestException('Đã có yêu cầu nghỉ phép trong khoảng thời gian này');
+            throw new BadRequestException('You already have a leave request during this period');
         }
 
-        // Check for assigned shifts during leave period
+        // Check for assigned shifts during leave period (for information only, not blocking)
         const conflictingShifts = await this.prisma.shift.findMany({
             where: {
                 employeeId,
@@ -85,19 +90,14 @@ export class StaffLeavesService {
             }
         });
 
-        // Only block if shifts are in APPROVED or LOCKED schedules
-        const blockedShifts = conflictingShifts.filter(
-            shift => shift.schedule.status === 'APPROVED' || shift.schedule.status === 'LOCKED'
-        );
-
-        if (blockedShifts.length > 0) {
-            const shiftDates = blockedShifts
-                .map(s => new Date(s.date).toLocaleDateString('vi-VN'))
-                .join(', ');
-            throw new BadRequestException(
-                `Bạn đã được phân công ${blockedShifts.length} ca làm việc trong khoảng thời gian này (${shiftDates}). ` +
-                'Vui lòng liên hệ trưởng phòng để điều chỉnh lịch trước khi xin nghỉ phép.'
-            );
+        // Log conflict information but DO NOT BLOCK - let manager decide
+        if (conflictingShifts.length > 0) {
+            const conflictInfo = conflictingShifts.map(s => ({
+                date: s.date,
+                type: s.shiftType,
+                scheduleStatus: s.schedule.status
+            }));
+            
         }
 
         // Check leave balance
@@ -108,10 +108,10 @@ export class StaffLeavesService {
         const availableLeave = leaveBalance.remainingLeave - leaveBalance.pendingLeave;
         if (requestedDays > availableLeave) {
             throw new BadRequestException(
-                `Không đủ số dư phép. ` +
-                `Bạn yêu cầu ${requestedDays} ngày nhưng chỉ còn ${availableLeave} ngày phép khả dụng ` +
-                `(Tổng: ${leaveBalance.totalAnnualLeave}, Đã dùng: ${leaveBalance.usedLeave}, ` +
-                `Đang chờ: ${leaveBalance.pendingLeave}).`
+                `Insufficient leave balance. ` +
+                `You requested ${requestedDays} days but only have ${availableLeave} days available ` +
+                `(Total: ${leaveBalance.totalAnnualLeave}, Used: ${leaveBalance.usedLeave}, ` +
+                `Pending: ${leaveBalance.pendingLeave}).`
             );
         }
 
@@ -195,13 +195,13 @@ export class StaffLeavesService {
     }
 
     /**
-     * Lấy chi tiết một yêu cầu nghỉ phép
+     * Get leave request details
      */
     async getLeaveRequestById(employeeId: string, id: string): Promise<LeaveRequestResponseDto> {
         const leaveRequest = await this.prisma.leaveRequest.findFirst({
             where: {
                 id,
-                employeeId // Chỉ lấy của chính nhân viên đó
+                employeeId // Only get own leave requests
             },
             include: {
                 approvedBy: {
@@ -215,14 +215,14 @@ export class StaffLeavesService {
         });
 
         if (!leaveRequest) {
-            throw new NotFoundException('Không tìm thấy yêu cầu nghỉ phép');
+            throw new NotFoundException('Leave request not found');
         }
 
         return this.mapToResponse(leaveRequest);
     }
 
     /**
-     * Cập nhật yêu cầu nghỉ phép (chỉ khi còn PENDING)
+     * Update leave request (only when PENDING)
      */
     async updateLeaveRequest(
         employeeId: string,
@@ -237,11 +237,11 @@ export class StaffLeavesService {
         });
 
         if (!leaveRequest) {
-            throw new NotFoundException('Không tìm thấy yêu cầu nghỉ phép');
+            throw new NotFoundException('Leave request not found');
         }
 
         if (leaveRequest.status !== 'PENDING') {
-            throw new ForbiddenException('Chỉ có thể sửa yêu cầu đang chờ duyệt');
+            throw new ForbiddenException('Can only edit pending leave requests');
         }
 
         // Validate dates if updated
@@ -250,7 +250,7 @@ export class StaffLeavesService {
             const endDate = dto.endDate ? new Date(dto.endDate) : leaveRequest.endDate;
 
             if (endDate < startDate) {
-                throw new BadRequestException('Ngày kết thúc phải sau ngày bắt đầu');
+                throw new BadRequestException('End date must be after start date');
             }
         }
 
@@ -277,7 +277,7 @@ export class StaffLeavesService {
     }
 
     /**
-     * Xóa/Hủy yêu cầu nghỉ phép (chỉ khi còn PENDING)
+     * Delete/Cancel leave request (only when PENDING)
      */
     async deleteLeaveRequest(employeeId: string, id: string): Promise<void> {
         const leaveRequest = await this.prisma.leaveRequest.findFirst({
@@ -288,11 +288,11 @@ export class StaffLeavesService {
         });
 
         if (!leaveRequest) {
-            throw new NotFoundException('Không tìm thấy yêu cầu nghỉ phép');
+            throw new NotFoundException('Leave request not found');
         }
 
         if (leaveRequest.status !== 'PENDING') {
-            throw new ForbiddenException('Chỉ có thể xóa yêu cầu đang chờ duyệt');
+            throw new ForbiddenException('Can only delete pending leave requests');
         }
 
         await this.prisma.leaveRequest.delete({
@@ -301,19 +301,19 @@ export class StaffLeavesService {
     }
 
     /**
-     * Lấy số dư phép năm
+     * Get leave balance for the year
      */
     async getLeaveBalance(employeeId: string): Promise<LeaveBalanceDto> {
-        // Lấy thông tin nhân viên
+        // Get employee info
         const employee = await this.prisma.user.findUnique({
             where: { id: employeeId }
         });
 
         if (!employee) {
-            throw new NotFoundException('Không tìm thấy nhân viên');
+            throw new NotFoundException('Employee not found');
         }
 
-        // Tính phép năm (giả sử: Full-time: 12 ngày/năm, Part-time: 8 ngày/năm)
+        // Calculate annual leave (Full-time: 12 days/year, Part-time: 8 days/year)
         const totalAnnualLeave = employee.employmentType === 'FULL_TIME' ? 12 : 8;
 
         // Đếm số ngày đã nghỉ trong năm nay (status = APPROVED)

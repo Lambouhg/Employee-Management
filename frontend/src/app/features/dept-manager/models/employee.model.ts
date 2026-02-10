@@ -22,6 +22,7 @@ export interface EmployeeListItem {
   fixedDayOff?: number;
   role?: EmployeeRole;
   createdAt: string;
+  isActive: boolean;
 }
 
 export interface EmployeeDetail {

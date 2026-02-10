@@ -5,25 +5,18 @@ import { roleGuard } from '@core/guards/role.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/login',
+    redirectTo: '/auth/login',
     pathMatch: 'full'
   },
   {
+    path: 'auth',
+    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
+  },
+  // Backward compatibility - redirect old login path
+  {
     path: 'login',
-    loadComponent: () => import('./features/auth/pages/login/login.component').then(m => m.LoginComponent)
-  },
-  {
-    path: 'auth/forgot-password',
-    loadComponent: () => import('./features/auth/pages/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
-  },
-  {
-    path: 'auth/reset-password',
-    loadComponent: () => import('./features/auth/pages/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
-  },
-  {
-    path: 'change-password',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/auth/pages/change-password/change-password.component').then(m => m.ChangePasswordComponent)
+    redirectTo: '/auth/login',
+    pathMatch: 'full'
   },
   {
     path: 'manager',

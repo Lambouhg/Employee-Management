@@ -1,7 +1,7 @@
 import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DepartmentService } from '@core/services/department.service';
+import { DepartmentService } from '../../services/department.service';
 import { Department, DepartmentEmployee } from '@core/models/department.model';
 import { Employee } from '@core/models/employee.model';
 import { LucideAngularModule, X, UserPlus, UserMinus, Check, Users, Info } from 'lucide-angular';

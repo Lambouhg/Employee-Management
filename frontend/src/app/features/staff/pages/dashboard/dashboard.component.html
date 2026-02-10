@@ -1,0 +1,334 @@
+<div class="min-h-screen bg-gray-50 p-3 sm:p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-4">
+      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p class="text-sm text-gray-600 mt-0.5">Welcome back, {{ dashboardData()?.user.fullName }}</p>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="flex items-center justify-center h-64">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="errorMessage()" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Dashboard Content -->
+    <div *ngIf="!isLoading() && dashboardData()" class="space-y-4">
+      <!-- Row 1: Today's Shift + Quick Stats -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Today's Shift Card -->
+        <div class="lg:col-span-1">
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 h-full">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-base font-semibold text-gray-900">Today's Shift</h2>
+              <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-600"></lucide-icon>
+            </div>
+
+            <!-- Live Clock -->
+            <div class="text-center mb-4 p-3 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg">
+              <div class="text-2xl font-bold text-gray-900">
+                {{ currentTime() | date: 'HH:mm:ss' }}
+              </div>
+              <div class="text-xs text-gray-600 mt-0.5">
+                {{ currentTime() | date: 'EEE, MMM d, y' }}
+              </div>
+            </div>
+
+            <!-- Shift Info -->
+            <div *ngIf="dashboardData()?.todayShift" class="space-y-3">
+              <div [ngClass]="getShiftTypeColor(dashboardData()!.todayShift!.shiftType)"
+                   class="p-3 rounded-lg border-2">
+                <div class="font-semibold text-xs mb-1.5">
+                  {{ getShiftTypeLabel(dashboardData()!.todayShift!.shiftType) }}
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <lucide-icon [img]="Clock" class="w-3 h-3"></lucide-icon>
+                  <span>{{ formatTime(dashboardData()!.todayShift!.startTime) }} - {{ formatTime(dashboardData()!.todayShift!.endTime) }}</span>
+                </div>
+              </div>
+
+              <!-- Attendance Status -->
+              <div *ngIf="dashboardData()!.todayShift!.attendance" class="p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-medium text-gray-700">Status</span>
+                  <span [ngClass]="getAttendanceStatusClass(dashboardData()!.todayShift!.attendance!.status)"
+                        class="px-2 py-1 text-xs font-semibold rounded-full">
+                    {{ getAttendanceStatusLabel(dashboardData()!.todayShift!.attendance!.status) }}
+                  </span>
+                </div>
+                <div *ngIf="dashboardData()!.todayShift!.attendance!.checkInTime" 
+                     class="text-xs text-gray-600">
+                  Check-in: {{ formatDateTime(dashboardData()!.todayShift!.attendance!.checkInTime!) }}
+                </div>
+              </div>
+
+              <!-- Check-in Button -->
+              <button *ngIf="dashboardData()!.todayShift!.canCheckIn"
+                      (click)="checkIn()"
+                      [disabled]="isCheckingIn()"
+                      class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 rounded-lg font-semibold text-sm
+                             hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg
+                             disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <lucide-icon [img]="CheckCircle" class="w-5 h-5"></lucide-icon>
+                <span>{{ isCheckingIn() ? 'Checking In...' : 'Check In Now' }}</span>
+              </button>
+
+              <div *ngIf="!dashboardData()!.todayShift!.canCheckIn && !dashboardData()!.todayShift!.attendance"
+                   class="text-sm text-gray-600 text-center p-3 bg-gray-50 rounded-lg">
+                Check-in opens 30 mins before shift
+              </div>
+            </div>
+
+            <!-- No Shift Today -->
+            <div *ngIf="!dashboardData()?.todayShift" 
+                 class="text-center py-8 text-gray-500">
+              <lucide-icon [img]="Calendar" class="w-12 h-12 mx-auto mb-3 opacity-50"></lucide-icon>
+              <p class="text-sm font-medium">No shift scheduled today</p>
+              <button (click)="navigateTo('/staff/available-shifts')"
+                      class="mt-4 text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                Browse Available Shifts →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats Cards + Quick Actions -->
+        <div class="lg:col-span-2 space-y-3">
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Shifts This Week -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-3"
+                 (click)="navigateTo('/staff/my-schedule')">
+              <lucide-icon [img]="CalendarDays" class="w-10 h-10 text-blue-600 flex-shrink-0"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <div class="text-2xl font-bold text-gray-900">{{ dashboardData()?.stats.shiftsThisWeek }}</div>
+                <div class="text-xs text-gray-600">Shifts This Week</div>
+              </div>
+            </div>
+
+            <!-- Leave Balance -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-3"
+                 (click)="navigateTo('/staff/leaves')">
+              <lucide-icon [img]="FileText" class="w-10 h-10 text-green-600 flex-shrink-0"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <div class="text-2xl font-bold text-gray-900">{{ dashboardData()?.stats.leaveBalance.remaining }}</div>
+                <div class="text-xs text-gray-600">Days Remaining</div>
+              </div>
+            </div>
+
+            <!-- Pending Registrations -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-3"
+                 (click)="navigateTo('/staff/my-registrations')">
+              <lucide-icon [img]="ClipboardList" class="w-10 h-10 text-yellow-600 flex-shrink-0"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <div class="text-2xl font-bold text-gray-900">{{ dashboardData()?.stats.pendingRegistrations }}</div>
+                <div class="text-xs text-gray-600">Pending Requests</div>
+              </div>
+            </div>
+
+            <!-- Attendance Rate -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-3"
+                 (click)="navigateTo('/staff/attendance')">
+              <lucide-icon [img]="TrendingUp" class="w-10 h-10 text-purple-600 flex-shrink-0"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <div class="text-2xl font-bold text-gray-900">{{ dashboardData()?.stats.attendanceRate }}%</div>
+                <div class="text-xs text-gray-600">Attendance Rate</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 class="text-base font-semibold text-gray-900 mb-3">Quick Actions</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button (click)="navigateTo('/staff/my-schedule')"
+                      class="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg transition-all border border-blue-200">
+                <lucide-icon [img]="Calendar" class="w-6 h-6 text-blue-600"></lucide-icon>
+                <span class="text-xs font-medium text-blue-900">My Schedule</span>
+              </button>
+
+              <button (click)="navigateTo('/staff/available-shifts')"
+                      class="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-lg transition-all border border-green-200">
+                <lucide-icon [img]="Zap" class="w-6 h-6 text-green-600"></lucide-icon>
+                <span class="text-xs font-medium text-green-900">Available Shifts</span>
+              </button>
+
+              <button (click)="navigateTo('/staff/attendance')"
+                      class="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded-lg transition-all border border-purple-200">
+                <lucide-icon [img]="CheckCircle" class="w-6 h-6 text-purple-600"></lucide-icon>
+                <span class="text-xs font-medium text-purple-900">Attendance</span>
+              </button>
+
+              <button (click)="navigateTo('/staff/leaves')"
+                      class="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 rounded-lg transition-all border border-yellow-200">
+                <lucide-icon [img]="FileText" class="w-6 h-6 text-yellow-600"></lucide-icon>
+                <span class="text-xs font-medium text-yellow-900">Leave Request</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Upcoming Schedule + Recent Activities -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Upcoming Schedule -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold text-gray-900">Upcoming Schedule</h2>
+            <button (click)="navigateTo('/staff/my-schedule')"
+                    class="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+              View All
+              <lucide-icon [img]="ArrowRight" class="w-4 h-4"></lucide-icon>
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div *ngFor="let shift of dashboardData()?.upcomingShifts.slice(0, 5)" 
+                 class="flex items-center gap-3 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div class="flex-shrink-0 text-center">
+                <div class="text-xs font-semibold text-gray-900">{{ formatDate(shift.date).split(',')[1].trim().split(' ')[1] }}</div>
+                <div class="text-[10px] text-gray-500">{{ formatDate(shift.date).split(',')[0] }}</div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-gray-900">{{ getShiftTypeLabel(shift.shiftType) }}</div>
+                <div class="text-[10px] text-gray-600">{{ formatTime(shift.startTime) }} - {{ formatTime(shift.endTime) }}</div>
+              </div>
+              <div *ngIf="shift.hasAttendance" 
+                   class="flex-shrink-0">
+                <lucide-icon [img]="CheckCircle" class="w-5 h-5 text-green-600"></lucide-icon>
+              </div>
+            </div>
+
+            <div *ngIf="!dashboardData()?.upcomingShifts.length" 
+                 class="text-center py-8 text-gray-500">
+              <lucide-icon [img]="Calendar" class="w-12 h-12 mx-auto mb-2 opacity-50"></lucide-icon>
+              <p class="text-sm">No upcoming shifts</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h2 class="text-base font-semibold text-gray-900 mb-3">Recent Activities</h2>
+
+          <div class="space-y-2">
+            <div *ngFor="let activity of dashboardData()?.recentActivities" 
+                 class="flex items-start gap-2 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div class="flex-shrink-0 mt-0.5">
+                <lucide-icon [img]="activity.type === 'registration' ? ClipboardList : FileText" 
+                             class="w-4 h-4"
+                             [ngClass]="activity.type === 'registration' ? 'text-blue-600' : 'text-green-600'">
+                </lucide-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 mb-0.5">
+                  <span class="text-xs font-medium text-gray-900">
+                    {{ activity.type === 'registration' ? 'Shift Registration' : 'Leave Request' }}
+                  </span>
+                  <span [ngClass]="getActivityStatusClass(activity.status)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full">
+                    {{ activity.status }}
+                  </span>
+                </div>
+                <div class="text-[10px] text-gray-600">
+                  <span *ngIf="activity.type === 'registration'">
+                    {{ getShiftTypeLabel(activity.details.shiftType) }} - 
+                    {{ formatDate(activity.details.shiftDate) }}
+                  </span>
+                  <span *ngIf="activity.type === 'leave'">
+                    {{ formatDate(activity.details.startDate) }} to 
+                    {{ formatDate(activity.details.endDate) }}
+                  </span>
+                </div>
+                <div class="text-[10px] text-gray-500 mt-0.5">
+                  {{ formatDateTime(activity.date) }}
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!dashboardData()?.recentActivities.length" 
+                 class="text-center py-8 text-gray-500">
+              <lucide-icon [img]="AlertCircle" class="w-12 h-12 mx-auto mb-2 opacity-50"></lucide-icon>
+              <p class="text-sm">No recent activities</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Performance Summary -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Leave Summary -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h2 class="text-base font-semibold text-gray-900 mb-3">Leave Summary</h2>
+          
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-gray-600">Annual Leave</span>
+                <span class="font-semibold text-gray-900">
+                  {{ dashboardData()?.stats.leaveBalance.used }} / {{ dashboardData()?.stats.leaveBalance.total }} days used
+                </span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all"
+                     [style.width.%]="(dashboardData()!.stats.leaveBalance.used / dashboardData()!.stats.leaveBalance.total) * 100">
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mt-4">
+              <div class="text-center p-2 bg-blue-50 rounded-lg">
+                <div class="text-xl font-bold text-blue-700">{{ dashboardData()?.stats.leaveBalance.total }}</div>
+                <div class="text-[10px] text-gray-600 mt-0.5">Total</div>
+              </div>
+              <div class="text-center p-2 bg-red-50 rounded-lg">
+                <div class="text-xl font-bold text-red-700">{{ dashboardData()?.stats.leaveBalance.used }}</div>
+                <div class="text-[10px] text-gray-600 mt-0.5">Used</div>
+              </div>
+              <div class="text-center p-2 bg-green-50 rounded-lg">
+                <div class="text-xl font-bold text-green-700">{{ dashboardData()?.stats.leaveBalance.remaining }}</div>
+                <div class="text-[10px] text-gray-600 mt-0.5">Remaining</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h2 class="text-base font-semibold text-gray-900 mb-3">This Month's Attendance</h2>
+          
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="p-2 bg-gray-50 rounded-lg">
+              <div class="text-xl font-bold text-gray-900">{{ dashboardData()?.stats.thisMonth.totalWorkingDays }}</div>
+              <div class="text-xs text-gray-600 mt-0.5">Working Days</div>
+            </div>
+            <div class="p-2 bg-green-50 rounded-lg">
+              <div class="text-xl font-bold text-green-700">{{ dashboardData()?.stats.thisMonth.presentDays }}</div>
+              <div class="text-xs text-gray-600 mt-0.5">Present</div>
+            </div>
+            <div class="p-2 bg-yellow-50 rounded-lg">
+              <div class="text-xl font-bold text-yellow-700">{{ dashboardData()?.stats.thisMonth.lateDays }}</div>
+              <div class="text-xs text-gray-600 mt-0.5">Late</div>
+            </div>
+            <div class="p-2 bg-red-50 rounded-lg">
+              <div class="text-xl font-bold text-red-700">{{ dashboardData()?.stats.thisMonth.absentDays }}</div>
+              <div class="text-xs text-gray-600 mt-0.5">Absent</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+            <lucide-icon [img]="Award" class="w-8 h-8 text-indigo-600"></lucide-icon>
+            <div>
+              <div class="text-base font-bold text-gray-900">{{ dashboardData()?.stats.onTimeRate }}%</div>
+              <div class="text-xs text-gray-600">On-Time Rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

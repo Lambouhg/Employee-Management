@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DeptManagerEmployeesService } from '../../services/dept-manager-employees.service';
+import { DeptManagerEmployeesService } from '../../services/employees.service';
 import { EmployeeDetail } from '../../models';
 import { LucideAngularModule, ArrowLeft, Mail, Phone, Calendar, Briefcase, User } from 'lucide-angular';
 import { Observable, switchMap, catchError, of, map, startWith } from 'rxjs';
