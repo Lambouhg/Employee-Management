@@ -8,6 +8,7 @@ import {
   IsUUID,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { EmploymentType } from '@prisma/client';
 
@@ -29,8 +30,15 @@ export class EmployeeQueryDto {
   managerId?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    // Handle 'null' string from query params to filter employees without departments
+    if (value === 'null' || value === null) return null;
+    if (value === undefined || value === '') return undefined;
+    return value;
+  })
+  @ValidateIf((o) => o.departmentId !== null)
   @IsUUID()
-  departmentId?: string;
+  departmentId?: string | null;
 
   @IsOptional()
   @Transform(({ value }) =>

@@ -1,0 +1,62 @@
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      Danh Sách Phân Công Nhân Viên
+    </h3>
+    <button class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span>Award list</span>
+    </button>
+  </div>
+
+  <div class="overflow-x-auto rounded-xl border border-gray-200">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NO</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Full Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Department</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Award</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Leave</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 bg-white">
+        <tr *ngFor="let employee of employees; let i = index" class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-4 text-sm font-medium text-gray-900">{{ i + 1 }}</td>
+          <td class="px-4 py-4">
+            <div class="flex items-center gap-3">
+              <div [ngClass]="{
+                'w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm': true,
+                'bg-gradient-to-br from-purple-500 to-purple-700': getAvatarColor(i) === 'gradient-1',
+                'bg-gradient-to-br from-pink-500 to-red-600': getAvatarColor(i) === 'gradient-2',
+                'bg-gradient-to-br from-blue-500 to-cyan-500': getAvatarColor(i) === 'gradient-3',
+                'bg-gradient-to-br from-green-500 to-teal-500': getAvatarColor(i) === 'gradient-4'
+              }">
+                {{ getInitials(employee.fullName) }}
+              </div>
+              <span class="text-sm font-medium text-gray-900">{{ employee.fullName }}</span>
+            </div>
+          </td>
+          <td class="px-4 py-4 text-sm text-gray-700">{{ employee.employmentType === 'FULL_TIME' ? 'Production' : 'Electrical' }}</td>
+          <td class="px-4 py-4 text-sm text-gray-700">{{ employee.shiftsThisWeek >= employee.maxShiftsAllowed ? 'Coby Beach' : 'Best Employee' }}</td>
+          <td class="px-4 py-4 text-sm text-gray-600">{{ getCurrentDate() }}</td>
+          <td class="px-4 py-4">
+            <span [ngClass]="{
+              'px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center': true,
+              'bg-green-100 text-green-700': !employee.isOverloaded,
+              'bg-red-100 text-red-700': employee.isOverloaded
+            }">
+              {{ employee.isOverloaded ? 'Approved' : 'Decline' }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

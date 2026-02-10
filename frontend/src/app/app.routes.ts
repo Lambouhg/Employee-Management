@@ -5,17 +5,18 @@ import { roleGuard } from '@core/guards/role.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/login',
+    redirectTo: '/auth/login',
     pathMatch: 'full'
   },
   {
-    path: 'login',
-    loadComponent: () => import('./features/auth/pages/login/login.component').then(m => m.LoginComponent)
+    path: 'auth',
+    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
   },
+  // Backward compatibility - redirect old login path
   {
-    path: 'change-password',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/auth/pages/change-password/change-password.component').then(m => m.ChangePasswordComponent)
+    path: 'login',
+    redirectTo: '/auth/login',
+    pathMatch: 'full'
   },
   {
     path: 'manager',
@@ -24,10 +25,16 @@ export const routes: Routes = [
     loadChildren: () => import('./features/manager/manager.routes').then(m => m.MANAGER_ROUTES)
   },
   {
+    path: 'dept-manager',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DEPT_MANAGER'] },
+    loadChildren: () => import('./features/dept-manager/dept-manager.routes').then(m => m.DEPT_MANAGER_ROUTES)
+  },
+  {
     path: 'staff',
     canActivate: [authGuard, roleGuard],
     data: { roles: ['STAFF'] },
-    loadChildren: () => import('./features/dashboard/staff-dashboard/staff.routes').then(m => m.STAFF_ROUTES)
+    loadChildren: () => import('./features/staff/staff.routes').then(m => m.STAFF_ROUTES)
   },
   {
     path: 'unauthorized',

@@ -79,11 +79,13 @@
 
           <div class="max-h-64 overflow-y-auto">
             <div *ngFor="let employee of currentEmployees"
+                 [class.opacity-50]="isDepartmentManager(employee.id)"
                  class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg">
               <input type="checkbox"
                      [checked]="selectedToRemove.has(employee.id)"
+                     [disabled]="isDepartmentManager(employee.id)"
                      (change)="toggleRemoveEmployee(employee.id)"
-                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed">
               <div class="flex items-center gap-3 flex-1 min-w-0">
                 <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
                   {{ getInitials(employee.fullName) }}
@@ -94,6 +96,10 @@
                 </div>
                 <span class="text-xs text-gray-500 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full flex-shrink-0">
                   {{ employee.role.displayName }}
+                </span>
+                <span *ngIf="isDepartmentManager(employee.id)" 
+                      class="text-xs text-amber-600 px-2 py-1 bg-amber-100 rounded-full flex-shrink-0 font-medium">
+                  Manager
                 </span>
               </div>
             </div>
@@ -125,12 +131,14 @@
       <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div class="flex items-start gap-3">
           <i-lucide [img]="Info" class="w-5 h-5 text-blue-600 mt-0.5"></i-lucide>
-          <div>
+          <div class="space-y-1">
             <p class="text-sm text-blue-800 font-medium">Note:</p>
-            <p class="text-sm text-blue-700">
-              When adding employees, they will automatically report to the department's DEPT_MANAGER.
-              When removing employees, their manager relationship will also be cleared.
-            </p>
+            <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+              <li>When adding employees, they will automatically report to the department's DEPT_MANAGER.</li>
+              <li>When removing employees, their manager relationship will also be cleared.</li>
+              <li>Employees can only belong to ONE department at a time. Adding to a new department will automatically remove them from their previous department.</li>
+              <li><strong>Department Manager cannot be removed.</strong> Please change the department manager first.</li>
+            </ul>
           </div>
         </div>
       </div>

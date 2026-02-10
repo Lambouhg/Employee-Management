@@ -1,0 +1,219 @@
+<!-- Modal Backdrop -->
+<div 
+  *ngIf="show && shift"
+  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+  (click)="onBackdropClick($event)">
+  
+  <!-- Modal Content -->
+  <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+       (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-gray-200 bg-gradient-to-r"
+         [ngClass]="{
+           'from-amber-500 to-orange-500': getShiftTypeColor() === 'amber',
+           'from-blue-500 to-cyan-500': getShiftTypeColor() === 'blue',
+           'from-indigo-500 to-purple-500': getShiftTypeColor() === 'indigo',
+           'from-slate-500 to-gray-500': getShiftTypeColor() === 'slate'
+         }">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-white">{{ getShiftTypeLabel() }}</h2>
+          <p class="text-sm text-white text-opacity-90 mt-1">{{ formatDate(shift.date) }}</p>
+        </div>
+        <button 
+          type="button"
+          (click)="onClose()"
+          class="p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Body - Scrollable -->
+    <div class="flex-1 overflow-y-auto p-6">
+      
+      <!-- Shift Information -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <!-- Time -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="flex items-center gap-2 text-gray-600 mb-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span class="text-sm font-medium">Working Hours</span>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">
+            {{ formatTime(shift.startTime) }} - {{ formatTime(shift.endTime) }}
+          </p>
+        </div>
+
+        <!-- Capacity -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="flex items-center gap-2 text-gray-600 mb-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <span class="text-sm font-medium">Part-time Capacity</span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <p class="text-2xl font-bold text-gray-900">
+              {{ shift.ptRegistered }}<span class="text-lg text-gray-500">/{{ shift.ptCapacity }}</span>
+            </p>
+            <span 
+              class="text-xs px-2 py-1 rounded-full font-bold"
+              [ngClass]="{
+                'bg-green-100 text-green-800': getRegistrationPercentage() >= 100,
+                'bg-yellow-100 text-yellow-800': getRegistrationPercentage() >= 70 && getRegistrationPercentage() < 100,
+                'bg-orange-100 text-orange-800': getRegistrationPercentage() < 70
+              }">
+              {{ getRegistrationPercentage().toFixed(0) }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes (if any) -->
+      <div *ngIf="shift.notes" class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+        <div class="flex items-start gap-2">
+          <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <p class="text-sm font-medium text-blue-900 mb-1">Notes:</p>
+            <p class="text-sm text-blue-800">{{ shift.notes }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assigned Employees -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-gray-900">Assigned Staff</h3>
+          <span class="text-sm text-gray-500">
+            {{ shift.shifts?.length || 0 }} employee(s)
+          </span>
+        </div>
+
+        <!-- No employees -->
+        <div *ngIf="!shift.shifts || shift.shifts.length === 0" 
+             class="text-center py-12 bg-gray-50 rounded-lg">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
+          <p class="text-gray-500 font-medium">No staff assigned yet</p>
+        </div>
+
+        <!-- Employee List -->
+        <div *ngIf="shift.shifts && shift.shifts.length > 0" class="space-y-3">
+          <div 
+            *ngFor="let assignedShift of shift.shifts; let i = index"
+            class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            
+            <div class="flex items-start justify-between gap-4">
+              <!-- Employee Info -->
+              <div class="flex items-start gap-3 flex-1 min-w-0">
+                <!-- Avatar -->
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center flex-shrink-0"
+                     [ngClass]="{
+                       'from-blue-400 to-blue-600': i % 4 === 0,
+                       'from-purple-400 to-purple-600': i % 4 === 1,
+                       'from-green-400 to-green-600': i % 4 === 2,
+                       'from-orange-400 to-orange-600': i % 4 === 3
+                     }">
+                  <span class="text-white font-bold text-sm">
+                    {{ (assignedShift.employee?.fullName || '?').charAt(0).toUpperCase() }}
+                  </span>
+                </div>
+
+                <!-- Name & Email -->
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-bold text-gray-900 truncate">
+                    {{ assignedShift.employee?.fullName || 'Unknown' }}
+                  </h4>
+                  <p class="text-sm text-gray-500 truncate">
+                    {{ assignedShift.employee?.email || 'N/A' }}
+                  </p>
+                  <span 
+                    class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full"
+                    [ngClass]="{
+                      'bg-blue-100 text-blue-800': assignedShift.employee?.employmentType === 'FULL_TIME',
+                      'bg-purple-100 text-purple-800': assignedShift.employee?.employmentType === 'PART_TIME'
+                    }">
+                    {{ assignedShift.employee?.employmentType === 'FULL_TIME' ? 'Full-time' : 'Part-time' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Attendance Status -->
+              <div class="flex-shrink-0">
+                <!-- Has checked in -->
+                <div *ngIf="assignedShift.attendance?.checkInTime" 
+                     class="text-right">
+                  <span 
+                    class="inline-flex items-center px-3 py-1.5 rounded-full font-bold text-sm"
+                    [ngClass]="{
+                      'bg-green-100 text-green-800': assignedShift.attendance.status === 'PRESENT',
+                      'bg-yellow-100 text-yellow-800': assignedShift.attendance.status === 'LATE',
+                      'bg-blue-100 text-blue-800': assignedShift.attendance.status === 'HALF_DAY',
+                      'bg-red-100 text-red-800': assignedShift.attendance.status === 'ABSENT'
+                    }">
+                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    {{ getAttendanceStatusLabel(assignedShift.attendance.status) }}
+                  </span>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                      </svg>
+                      <span>Check-in: <strong>{{ formatDateTime(assignedShift.attendance.checkInTime) }}</strong></span>
+                    </div>
+                    <div *ngIf="assignedShift.attendance.checkOutTime" 
+                         class="flex items-center justify-end gap-1.5 mt-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                      </svg>
+                      <span>Check-out: <strong>{{ formatDateTime(assignedShift.attendance.checkOutTime) }}</strong></span>
+                    </div>
+                    <div *ngIf="assignedShift.attendance.totalMinutes" 
+                         class="flex items-center justify-end gap-1.5 mt-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span>Total: <strong>{{ (assignedShift.attendance.totalMinutes / 60).toFixed(1) }}h</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Not checked in -->
+                <div *ngIf="!assignedShift.attendance?.checkInTime">
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 font-bold text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    Not Checked In
+                  </span>
+                  <p class="text-xs text-gray-500 mt-2 text-right">Awaiting attendance</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+      <button 
+        type="button"
+        (click)="onClose()"
+        class="w-full px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

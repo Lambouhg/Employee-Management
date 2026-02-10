@@ -14,6 +14,10 @@ export const MANAGER_ROUTES: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      // {
+      //   path: 'shift-overview',
+      //   loadComponent: () => import('./pages/shift-overview/shift-overview.component').then(m => m.ShiftOverviewComponent)
+      // },
       {
         path: 'employees',
         loadComponent: () => import('./pages/employee-list/employee-list.component').then(m => m.EmployeeListComponent)
@@ -25,6 +29,10 @@ export const MANAGER_ROUTES: Routes = [
       {
         path: 'departments',
         loadComponent: () => import('./pages/department-list/department-list.component').then(m => m.DepartmentListComponent)
+      },
+      {
+        path: 'departments/:id',
+        loadComponent: () => import('./pages/department-detail/department-detail.component').then(m => m.DepartmentDetailComponent)
       },
       {
         path: 'approvals/schedules',

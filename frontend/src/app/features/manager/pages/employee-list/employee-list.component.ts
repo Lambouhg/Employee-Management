@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '@core/services/auth.service';
-import { ManagerService } from '@app/core/services/manager.service';
-import { DepartmentService } from '@core/services/department.service';
+import { ManagerService } from '../../services/manager.service';
+import { DepartmentService } from '../../services/department.service';
 import { Employee, EmployeeQueryParams } from '@core/models/employee.model';
 import { Role } from '@core/models/role.model';
 import { Department } from '@core/models/department.model';
@@ -74,9 +74,8 @@ export class EmployeeListComponent implements OnInit {
   isLoading = false;
   error: string | null = null;
   
-  // Modal states
+  // Modal states (only for creating new employees)
   showEmployeeForm = false;
-  selectedEmployeeId?: string;
   
   // Lucide Icons
   readonly Plus = Plus;
@@ -268,14 +267,13 @@ export class EmployeeListComponent implements OnInit {
     });
   }
 
-  openEmployeeForm(employeeId?: string): void {
-    this.selectedEmployeeId = employeeId;
+  openEmployeeForm(): void {
+    // Only for creating new employees
     this.showEmployeeForm = true;
   }
 
   closeEmployeeForm(): void {
     this.showEmployeeForm = false;
-    this.selectedEmployeeId = undefined;
   }
 
   onEmployeeSaved(): void {
@@ -360,9 +358,6 @@ export class EmployeeListComponent implements OnInit {
         break;
       case 'reset-password':
         if (event.employee) this.resetPassword(event.employee);
-        break;
-      case 'edit':
-        this.openEmployeeForm(event.employeeId);
         break;
       case 'delete':
         this.deleteEmployee(event.employeeId);

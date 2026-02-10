@@ -87,6 +87,6 @@ export class NavbarComponent {
   }
 
   navigateToChangePassword(): void {
-    this.router.navigate(['/change-password']);
+    this.router.navigate(['/auth/change-password']);
   }
 }

@@ -1,7 +1,7 @@
 import { Component, inject, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DepartmentService } from '@core/services/department.service';
+import { DepartmentService } from '../../services/department.service';
 import { Department, DepartmentEmployee } from '@core/models/department.model';
 import { Employee } from '@core/models/employee.model';
 import { LucideAngularModule, X, UserPlus, UserMinus, Check, Users, Info } from 'lucide-angular';
@@ -54,12 +54,22 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
     this.currentEmployees = this.department.employees || [];
 
     // Available employees (not in current department)
+    // Note: allEmployees is already filtered to only include employees without departments
     const currentEmployeeIds = new Set(this.currentEmployees.map(emp => emp.id));
     this.availableEmployees = this.allEmployees.filter(emp => !currentEmployeeIds.has(emp.id));
 
     // Reset selections
     this.selectedToAdd.clear();
     this.selectedToRemove.clear();
+  }
+
+  isDepartmentManager(employeeId: string): boolean {
+    return this.department?.manager?.id === employeeId;
+  }
+
+  canRemoveEmployee(employeeId: string): boolean {
+    // Cannot remove department manager
+    return !this.isDepartmentManager(employeeId);
   }
 
   toggleAddEmployee(employeeId: string): void {
@@ -71,6 +81,11 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
   }
 
   toggleRemoveEmployee(employeeId: string): void {
+    // Cannot remove department manager
+    if (this.isDepartmentManager(employeeId)) {
+      return;
+    }
+
     if (this.selectedToRemove.has(employeeId)) {
       this.selectedToRemove.delete(employeeId);
     } else {
@@ -87,10 +102,13 @@ export class ManageEmployeesModalComponent implements OnInit, OnChanges {
   }
 
   selectAllToRemove(): void {
-    if (this.selectedToRemove.size === this.currentEmployees.length) {
+    // Filter out department manager
+    const removableEmployees = this.currentEmployees.filter(emp => this.canRemoveEmployee(emp.id));
+
+    if (this.selectedToRemove.size === removableEmployees.length) {
       this.selectedToRemove.clear();
     } else {
-      this.currentEmployees.forEach(emp => this.selectedToRemove.add(emp.id));
+      removableEmployees.forEach(emp => this.selectedToRemove.add(emp.id));
     }
   }
 

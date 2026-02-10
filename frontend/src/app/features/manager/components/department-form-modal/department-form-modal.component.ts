@@ -1,9 +1,9 @@
 import { Component, inject, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DepartmentService } from '@core/services/department.service';
+import { DepartmentService } from '../../services/department.service';
 import { DepartmentDetail } from '@core/models/department.model';
-import { LucideAngularModule, X, Info } from 'lucide-angular';
+import { LucideAngularModule, X, Info, Building2, Hash, FileText } from 'lucide-angular';
 
 @Component({
   selector: 'app-department-form-modal',
@@ -13,6 +13,7 @@ import { LucideAngularModule, X, Info } from 'lucide-angular';
 })
 export class DepartmentFormModalComponent implements OnInit {
   @Input() departmentId?: string;
+  @Input() department?: DepartmentDetail;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
 
@@ -22,15 +23,24 @@ export class DepartmentFormModalComponent implements OnInit {
   form!: FormGroup;
   isEdit = false;
   isSubmitting = false;
+  isLoading = false;
   errorMessage: string | null = null;
 
   readonly X = X;
   readonly Info = Info;
+  readonly Building2 = Building2;
+  readonly Hash = Hash;
+  readonly FileText = FileText;
 
   ngOnInit(): void {
     this.isEdit = !!this.departmentId;
     this.initForm();
-    this.loadData();
+
+    if (this.department) {
+      this.patchForm(this.department);
+    } else {
+      this.loadData();
+    }
   }
 
   initForm() {
@@ -43,13 +53,16 @@ export class DepartmentFormModalComponent implements OnInit {
 
   loadData() {
     if (this.isEdit && this.departmentId) {
+      this.isLoading = true;
       this.departmentService.getDepartmentDetail(this.departmentId).subscribe({
         next: (detail) => {
           this.patchForm(detail);
+          this.isLoading = false;
         },
         error: (err) => {
           console.error('Error loading department form data', err);
           this.errorMessage = 'Không thể tải dữ liệu phòng ban';
+          this.isLoading = false;
         }
       });
     }
@@ -72,7 +85,7 @@ export class DepartmentFormModalComponent implements OnInit {
     this.isSubmitting = true;
 
     const formValue = this.form.value;
-    
+
     // Prepare payload - only name, code, description (NO managerId)
     const payload = {
       name: formValue.name,
@@ -83,16 +96,16 @@ export class DepartmentFormModalComponent implements OnInit {
     if (!this.isEdit) {
       // Create mode
       this.departmentService.create(payload).subscribe({
-        next: () => { 
-          this.isSubmitting = false; 
-          this.saved.emit(); 
-          this.onClose(); 
+        next: () => {
+          this.isSubmitting = false;
+          this.saved.emit();
+          this.onClose();
         },
         error: (err) => {
           console.error('Create error:', err);
           console.error('Error response:', err.error);
           this.isSubmitting = false;
-          
+
           // Handle different error formats
           let errorMsg = 'Lỗi tạo phòng ban';
           if (err.error) {
@@ -110,10 +123,10 @@ export class DepartmentFormModalComponent implements OnInit {
     } else {
       // Edit mode - only update metadata, NOT manager
       this.departmentService.update(this.departmentId!, payload).subscribe({
-        next: () => { 
-          this.isSubmitting = false; 
-          this.saved.emit(); 
-          this.onClose(); 
+        next: () => {
+          this.isSubmitting = false;
+          this.saved.emit();
+          this.onClose();
         },
         error: (err) => {
           console.error('Update error:', err);

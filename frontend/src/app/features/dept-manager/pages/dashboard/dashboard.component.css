@@ -1,0 +1,29 @@
+﻿/* All styling moved to Tailwind CSS classes in the template */
+/* This file is kept for potential future custom styles */
+
+:host {
+  display: block;
+  background: #f8fafc;
+}
+
+/* SVG Text Styles (for charts) */
+svg text {
+  font-family: inherit;
+}
+
+svg .text-3xl {
+  font-size: 28px;
+}
+
+svg .text-2xl {
+  font-size: 20px;
+}
+
+svg .text-xs {
+  font-size: 12px;
+}
+
+svg .font-bold {
+  font-weight: 700;
+}
+

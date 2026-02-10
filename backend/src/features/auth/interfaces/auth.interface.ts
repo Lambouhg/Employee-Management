@@ -26,6 +26,7 @@ export interface LoginResponse {
       code: string;
     } | null;
     employmentType: string;
+    permissions: string[];
   };
 }
 

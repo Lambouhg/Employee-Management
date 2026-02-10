@@ -12,7 +12,8 @@ import {
   ClipboardList,
   FileText,
   BarChart3,
-  TrendingUp
+  TrendingUp,
+  Calendar
 } from 'lucide-angular';
 
 @Component({
@@ -29,6 +30,7 @@ export class ManagerLayoutComponent implements OnInit {
 
   menuItems: NavMenuItem[] = [
     { label: 'Dashboard', icon: LayoutDashboard, route: '/manager/dashboard' },
+    // { label: 'Tổng quan ca làm', icon: Calendar, route: '/manager/shift-overview' },
     { label: 'Quản lý nhân viên', icon: Users, route: '/manager/employees' },
     { label: 'Phòng ban', icon: Building2, route: '/manager/departments' },
     { label: 'Duyệt lịch', icon: ClipboardList, route: '/manager/approvals/schedules' },

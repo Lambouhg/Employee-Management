@@ -1,0 +1,209 @@
+<div class="leave-detail-page">
+    <!-- Loading State -->
+    @if (loading()) {
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Đang tải thông tin...</p>
+    </div>
+    }
+
+    <!-- Content -->
+    @if (!loading() && leaveRequest()) {
+    <div class="detail-container">
+        <!-- Header -->
+        <div class="page-header">
+            <button class="btn-back" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </button>
+            <h1>Chi tiết yêu cầu nghỉ phép</h1>
+        </div>
+
+        <!-- Main Info Card -->
+        <div class="info-card">
+            <div class="card-header">
+                <h2>Thông tin yêu cầu</h2>
+                <span class="status-badge" [class]="leaveRequest()!.status.toLowerCase()">
+                    {{getStatusText(leaveRequest()!.status)}}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Nhân viên</label>
+                        <div class="employee-box">
+                            <div class="employee-name">{{leaveRequest()!.employee.fullName}}</div>
+                            <div class="employee-email">{{leaveRequest()!.employee.email}}</div>
+                            <div class="employee-type">
+                                {{leaveRequest()!.employee.employmentType === 'FULL_TIME' ? 'Toàn thời gian' : 'Bán thời gian'}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Loại phép</label>
+                        <p class="info-value">{{getLeaveTypeText(leaveRequest()!.leaveType)}}</p>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Từ ngày</label>
+                        <p class="info-value">{{formatDate(leaveRequest()!.startDate)}}</p>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Đến ngày</label>
+                        <p class="info-value">{{formatDate(leaveRequest()!.endDate)}}</p>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Số ngày nghỉ</label>
+                        <p class="info-value highlight">
+                            {{calculateDays(leaveRequest()!.startDate, leaveRequest()!.endDate)}} ngày
+                        </p>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Ngày tạo yêu cầu</label>
+                        <p class="info-value">{{formatDate(leaveRequest()!.createdAt)}}</p>
+                    </div>
+                </div>
+
+                <div class="info-item full-width">
+                    <label>Lý do nghỉ phép</label>
+                    <div class="reason-box">{{leaveRequest()!.reason}}</div>
+                </div>
+
+                @if (leaveRequest()!.status !== 'PENDING') {
+                <div class="approval-info">
+                    <div class="info-item">
+                        <label>Người xử lý</label>
+                        <p class="info-value">{{leaveRequest()!.approvedBy?.fullName || 'N/A'}}</p>
+                    </div>
+                    <div class="info-item">
+                        <label>Thời gian xử lý</label>
+                        <p class="info-value">
+                            {{leaveRequest()!.approvedAt ? formatDate(leaveRequest()!.approvedAt) : 'N/A'}}
+                        </p>
+                    </div>
+                    @if (leaveRequest()!.rejectionReason) {
+                    <div class="info-item full-width">
+                        <label>Lý do từ chối</label>
+                        <div class="rejection-box">{{leaveRequest()!.rejectionReason}}</div>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- Conflicting Shifts Alert -->
+        @if (leaveRequest()!.conflictingShifts && leaveRequest()!.conflictingShifts.length > 0) {
+        <div class="conflict-alert">
+            <div class="alert-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Cảnh báo: Có ca làm việc bị conflict!</h3>
+            </div>
+            <p class="alert-message">
+                Nhân viên này đã được phân công <strong>{{leaveRequest()!.conflictingShifts.length}} ca làm việc</strong> 
+                trong khoảng thời gian nghỉ phép. Các ca này sẽ <strong>TỰ ĐỘNG BỊ XÓA</strong> nếu bạn duyệt yêu cầu này.
+            </p>
+            <div class="shifts-list">
+                @for (shift of leaveRequest()!.conflictingShifts; track shift.id) {
+                <div class="shift-item">
+                    <div class="shift-date">
+                        <i class="fas fa-calendar"></i>
+                        {{formatDate(shift.date)}}
+                    </div>
+                    <div class="shift-type">
+                        <i class="fas fa-clock"></i>
+                        Ca {{getShiftTypeText(shift.shiftType)}}
+                    </div>
+                    <div class="shift-schedule-status">
+                        Lịch: {{getScheduleStatusText(shift.scheduleStatus)}}
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Action Buttons -->
+        @if (leaveRequest()!.status === 'PENDING') {
+        <div class="action-buttons">
+            <button 
+                class="btn btn-approve"
+                (click)="approve()"
+                [disabled]="processing()">
+                @if (processing()) {
+                <span class="spinner-small"></span>
+                } @else {
+                <i class="fas fa-check"></i>
+                }
+                Duyệt yêu cầu
+            </button>
+            <button 
+                class="btn btn-reject"
+                (click)="openRejectForm()"
+                [disabled]="processing()">
+                <i class="fas fa-times"></i>
+                Từ chối
+            </button>
+        </div>
+        }
+
+        <!-- Reject Form Modal -->
+        @if (showRejectForm()) {
+        <div class="modal-overlay" (click)="cancelReject()">
+            <div class="modal-content" (click)="$event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>Từ chối yêu cầu nghỉ phép</h3>
+                    <button class="btn-close" (click)="cancelReject()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form [formGroup]="rejectForm" (ngSubmit)="reject()">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="rejectionReason">
+                                Lý do từ chối <span class="required">*</span>
+                            </label>
+                            <textarea 
+                                id="rejectionReason"
+                                class="form-control"
+                                [class.error]="rejectForm.get('rejectionReason')?.invalid && rejectForm.get('rejectionReason')?.touched"
+                                formControlName="rejectionReason"
+                                rows="4"
+                                placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự)">
+                            </textarea>
+                            @if (getErrorMessage('rejectionReason')) {
+                            <span class="error-message">{{getErrorMessage('rejectionReason')}}</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button 
+                            type="button" 
+                            class="btn btn-cancel"
+                            (click)="cancelReject()"
+                            [disabled]="processing()">
+                            Hủy
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="btn btn-reject"
+                            [disabled]="rejectForm.invalid || processing()">
+                            @if (processing()) {
+                            <span class="spinner-small"></span>
+                            Đang xử lý...
+                            } @else {
+                            <i class="fas fa-times"></i>
+                            Xác nhận từ chối
+                            }
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>

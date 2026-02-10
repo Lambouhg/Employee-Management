@@ -63,7 +63,7 @@ export interface EmployeeQueryParams {
   employmentType?: 'FULL_TIME' | 'PART_TIME';
   roleId?: string;
   managerId?: string;
-  departmentId?: string;
+  departmentId?: string | null; // Allow null to filter employees without departments
   isActive?: boolean;
   page?: number;
   limit?: number;
@@ -102,4 +102,8 @@ export interface SubordinatesResponse {
   };
   subordinates: Employee[];
   count: number;
+}
+export interface EmployeeSelectionItem {
+  id: string;
+  fullName: string;
 }

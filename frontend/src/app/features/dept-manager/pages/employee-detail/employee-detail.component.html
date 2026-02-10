@@ -1,0 +1,175 @@
+<div class="max-w-5xl mx-auto p-6" *ngIf="state$ | async as state">
+  <!-- Header with Back Button -->
+  <div class="mb-8">
+    <button 
+      (click)="goBack()"
+      class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition mb-4">
+      <i-lucide [img]="ArrowLeftIcon" class="w-4 h-4"></i-lucide>
+      Back to Employees
+    </button>
+    <h1 class="text-3xl font-black text-gray-900">Employee Details</h1>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="state.isLoading" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    <p class="text-gray-500 mt-4">Loading employee details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!state.isLoading && state.errorMessage" class="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+    <svg class="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <h3 class="text-lg font-bold text-red-800 mb-2">Error Loading Employee</h3>
+    <p class="text-red-600 mb-4">{{ state.errorMessage }}</p>
+    <button 
+      (click)="goBack()"
+      class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+      Go Back
+    </button>
+  </div>
+
+  <!-- Employee Details -->
+  <div *ngIf="!state.isLoading && state.employee" class="space-y-6">
+    <!-- Profile Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+      <div class="flex items-start gap-6">
+        <!-- Avatar -->
+        <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-black shadow-lg">
+          {{ state.employee.fullName.charAt(0) }}
+        </div>
+
+        <!-- Basic Info -->
+        <div class="flex-1">
+          <div class="flex items-start justify-between">
+            <div>
+              <h2 class="text-2xl font-black text-gray-900">{{ state.employee.fullName }}</h2>
+              <p class="text-gray-500 mt-1">{{ state.employee.role?.displayName || 'Employee' }}</p>
+            </div>
+            <span 
+              [class]="getEmploymentTypeClass(state.employee.employmentType)"
+              class="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-tight border">
+              {{ getEmploymentTypeLabel(state.employee.employmentType) }}
+            </span>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <i-lucide [img]="MailIcon" class="w-5 h-5 text-indigo-600"></i-lucide>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Email</p>
+                <p class="text-gray-900 font-medium">{{ state.employee.email }}</p>
+              </div>
+            </div>
+
+            <div *ngIf="state.employee.phone" class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                <i-lucide [img]="PhoneIcon" class="w-5 h-5 text-green-600"></i-lucide>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Phone</p>
+                <p class="text-gray-900 font-medium">{{ state.employee.phone }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Employment Information -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+          <i-lucide [img]="BriefcaseIcon" class="w-5 h-5 text-indigo-600"></i-lucide>
+          Employment Information
+        </h3>
+        
+        <div class="space-y-4">
+          <div class="flex justify-between py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium">Employment Type</span>
+            <span class="text-gray-900 font-bold">{{ getEmploymentTypeLabel(state.employee.employmentType) }}</span>
+          </div>
+
+          <div class="flex justify-between py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium">Fixed Day Off</span>
+            <span class="text-gray-900 font-bold">{{ getDayOfWeekLabel(state.employee.fixedDayOff) }}</span>
+          </div>
+
+          <div class="flex justify-between py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium">Status</span>
+            <span class="px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-xs font-bold uppercase">
+              {{ state.employee.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+
+          <div *ngIf="state.employee.department" class="flex justify-between py-3">
+            <span class="text-gray-600 font-medium">Department</span>
+            <div class="text-right">
+              <div class="text-gray-900 font-bold">{{ state.employee.department.name }}</div>
+              <div class="text-xs text-gray-500">{{ state.employee.department.code }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Information -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+          <i-lucide [img]="UserIcon" class="w-5 h-5 text-indigo-600"></i-lucide>
+          Account Information
+        </h3>
+
+        <div class="space-y-4">
+          <div class="py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium block mb-1">Employee ID</span>
+            <span class="text-gray-900 font-mono text-sm">{{ state.employee.id }}</span>
+          </div>
+
+          <div class="py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium block mb-1">Role</span>
+            <div>
+              <span class="text-gray-900 font-bold">{{ state.employee.role?.displayName || 'N/A' }}</span>
+              <span *ngIf="state.employee.role?.name" class="text-xs text-gray-500 ml-2">({{ state.employee.role.name }})</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between py-3 border-b border-gray-100">
+            <span class="text-gray-600 font-medium">Joined Date</span>
+            <div class="flex items-center gap-2 text-gray-900 font-medium">
+              <i-lucide [img]="CalendarIcon" class="w-4 h-4 text-gray-400"></i-lucide>
+              {{ state.employee.createdAt | date:'mediumDate' }}
+            </div>
+          </div>
+
+          <div class="flex justify-between py-3">
+            <span class="text-gray-600 font-medium">Last Updated</span>
+            <div class="flex items-center gap-2 text-gray-900 font-medium">
+              <i-lucide [img]="CalendarIcon" class="w-4 h-4 text-gray-400"></i-lucide>
+              {{ state.employee.updatedAt | date:'mediumDate' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h3 class="text-lg font-black text-gray-900 mb-4">Quick Actions</h3>
+      <div class="flex flex-wrap gap-3">
+        <button class="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold shadow-sm hover:shadow-md">
+          View Schedule
+        </button>
+        <button class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-bold">
+          View Attendance
+        </button>
+        <button class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-bold">
+          View Leaves
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

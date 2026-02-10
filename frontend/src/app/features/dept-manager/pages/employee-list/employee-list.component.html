@@ -1,0 +1,143 @@
+<div class="p-6" *ngIf="state$ | async as state">
+  <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Employees</h1>
+      <p class="text-gray-500">Manage and view your department's personnel.</p>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <i-lucide [img]="SearchIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i-lucide>
+        <input type="text" 
+               [(ngModel)]="searchQuery"
+               (input)="onSearchChange()"
+               placeholder="Search employees..." 
+               class="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition w-full md:w-64">
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="state.errorMessage" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-center justify-between">
+    <span>{{ state.errorMessage }}</span>
+    <button (click)="clearError()" class="text-red-400 hover:text-red-600">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <!-- Loading State -->
+    <div *ngIf="state.isLoading" class="p-12 text-center">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <p class="text-gray-500 mt-4">Loading employees...</p>
+    </div>
+
+    <!-- Data Table -->
+    <div *ngIf="!state.isLoading" class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead class="bg-gray-50/50 text-gray-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100">
+          <tr>
+            <th class="px-6 py-4">Employee</th>
+            <th class="px-6 py-4">Contact</th>
+            <th class="px-6 py-4">Role / Type</th>
+            <th class="px-6 py-4">Join Date</th>
+            <th class="px-6 py-4">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr *ngFor="let employee of state.data" class="hover:bg-gray-50/50 transition group cursor-pointer" 
+              (click)="onEmployeeClick(employee.id)">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                  {{ employee.fullName.charAt(0) }}
+                </div>
+                <div>
+                  <div class="font-bold text-gray-900">{{ employee.fullName }}</div>
+                  <div class="text-xs text-gray-500">{{ employee.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 text-xs text-gray-600">
+                  <i-lucide [img]="MailIcon" class="w-3 h-3"></i-lucide>
+                  {{ employee.email }}
+                </div>
+                <div *ngIf="employee.phone" class="flex items-center gap-2 text-xs text-gray-600">
+                  <i-lucide [img]="PhoneIcon" class="w-3 h-3"></i-lucide>
+                  {{ employee.phone }}
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div>
+                <div class="text-sm font-medium text-gray-900">{{ employee.role?.displayName || 'Staff' }}</div>
+                <span [class]="getEmploymentTypeClass(employee.employmentType)" 
+                      class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter">
+                  {{ employee.employmentType }}
+                </span>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2 text-sm text-gray-600">
+                <i-lucide [img]="CalendarIcon" class="w-3 h-3"></i-lucide>
+                {{ employee.createdAt | date:'mediumDate' }}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter border bg-green-50 text-green-600 border-green-100">
+                Active
+              </span>
+            </td>
+          </tr>
+          
+          <tr *ngIf="state.data.length === 0">
+            <td colspan="5" class="px-6 py-12 text-center">
+              <div class="text-gray-400">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <p class="font-bold text-lg">No employees found</p>
+                <p class="text-sm mt-1">{{ searchQuery ? 'Try adjusting your search criteria' : 'Your department has no employees yet' }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!state.isLoading && state.totalPages > 1" class="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+      <div class="text-sm text-gray-600">
+        Showing {{ (state.currentPage - 1) * 10 + 1 }} to {{ Math.min(state.currentPage * 10, state.totalItems) }} of {{ state.totalItems }} employees
+      </div>
+      <div class="flex items-center gap-2">
+        <button 
+          (click)="goToPage(state.currentPage - 1, state.totalPages)"
+          [disabled]="state.currentPage === 1"
+          class="px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition">
+          Previous
+        </button>
+        <div class="flex items-center gap-1">
+          <button *ngFor="let page of getPageNumbers(state.currentPage, state.totalPages)" 
+                  (click)="goToPage(page, state.totalPages)"
+                  [class.bg-indigo-600]="page === state.currentPage"
+                  [class.text-white]="page === state.currentPage"
+                  [class.hover:bg-gray-50]="page !== state.currentPage"
+                  class="px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium transition">
+            {{ page }}
+          </button>
+        </div>
+        <button 
+          (click)="goToPage(state.currentPage + 1, state.totalPages)"
+          [disabled]="state.currentPage === state.totalPages"
+          class="px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition">
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
